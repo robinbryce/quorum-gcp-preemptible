@@ -1,11 +1,12 @@
 provider "google" {
   version     = "3.4.0"
-  credentials = var.GOOGLE_CLOUD_KEYFILE_JSON
+  # credentials = var.GOOGLE_CLOUD_KEYFILE_JSON
+  credentials = var.gcp_compute_api_key
 }
 
 provider "google-beta" {
   version     = "3.5.0"
-  credentials = var.GOOGLE_CLOUD_KEYFILE_JSON
+  credentials = var.gcp_compute_api_key
 }
 
 resource "google_project_service" "cloudresourcemanager" {

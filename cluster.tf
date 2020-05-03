@@ -1,6 +1,9 @@
 locals {
   project = " consortia-quorum-preempt"
 }
+variable "gcp_compute_api_key" {
+  type = string
+}
 
 module "cluster" {
 

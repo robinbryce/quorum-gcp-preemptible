@@ -2,7 +2,7 @@ variable "project" {
   type = string
 }
 
-variable "GOOGLE_CLOUD_KEYFILE_JSON" {
+variable "gcp_compute_api_key" {
   type = string
 }
 
