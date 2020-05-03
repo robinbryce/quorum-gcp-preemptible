@@ -29,7 +29,7 @@ module "cluster" {
       machine_type       = "g1-small" # $$$
       initial_node_count = 1
       min_node_count     = 1
-      max_node_count     = 2
+      max_node_count     = 1
       preemptible        = true
       auto_repair        = true
       auto_upgrade       = false
