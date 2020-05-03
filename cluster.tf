@@ -26,7 +26,7 @@ module "cluster" {
 
   node_pools = {
     ingress-pool = {
-      machine_type       = "f1-micro" # $$$
+      machine_type       = "g1-small" # $$$
       initial_node_count = 1
       min_node_count     = 1
       max_node_count     = 2
