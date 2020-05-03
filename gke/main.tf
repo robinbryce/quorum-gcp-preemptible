@@ -1,11 +1,17 @@
+variable "GOOGLE_CLOUD_KEYFILE_JSON" {
+  type = string
+  # default = file("credentials/terraform/gcp-terrraform-compute-api.json")
+  default = ""
+}
+
 provider "google" {
   version     = "3.4.0"
-  credentials = file("credentials/terraform/gcp-terrraform-compute-api.json")
+  credentials = var.GOOGLE_CLOUD_KEYFILE_JSON
 }
 
 provider "google-beta" {
   version     = "3.5.0"
-  credentials = file("credentials/terraform/gcp-terrraform-compute-api.json")
+  credentials = var.GOOGLE_CLOUD_KEYFILE_JSON
 }
 
 resource "google_project_service" "cloudresourcemanager" {
