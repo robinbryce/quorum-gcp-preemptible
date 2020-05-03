@@ -1,7 +1,5 @@
 variable "GOOGLE_CLOUD_KEYFILE_JSON" {
   type = string
-  # default = file("credentials/terraform/gcp-terrraform-compute-api.json")
-  default = ""
 }
 
 provider "google" {
