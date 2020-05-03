@@ -2,10 +2,6 @@ variable "project" {
   type = string
 }
 
-variable "gcp_compute_api_key" {
-  type = string
-}
-
 variable "cluster_name" {
   type = string
 }
