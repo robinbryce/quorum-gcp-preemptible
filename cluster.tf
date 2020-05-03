@@ -1,5 +1,5 @@
 locals {
-  project = "consortia-quorum-preempt"
+  project = "quorumpreempt"
 }
 
 
