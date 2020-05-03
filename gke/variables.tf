@@ -2,6 +2,10 @@ variable "project" {
   type = string
 }
 
+variable "GOOGLE_CLOUD_KEYFILE_JSON" {
+  type = string
+}
+
 variable "cluster_name" {
   type = string
 }

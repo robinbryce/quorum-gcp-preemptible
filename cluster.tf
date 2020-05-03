@@ -1,7 +1,3 @@
-variable "GOOGLE_CLOUD_KEYFILE_JSON" {
-  type = string
-}
-
 locals {
   project = " consortia-quorum-preempt"
 }

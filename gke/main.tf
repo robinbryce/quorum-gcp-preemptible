@@ -1,7 +1,3 @@
-variable "GOOGLE_CLOUD_KEYFILE_JSON" {
-  type = string
-}
-
 provider "google" {
   version     = "3.4.0"
   credentials = var.GOOGLE_CLOUD_KEYFILE_JSON
