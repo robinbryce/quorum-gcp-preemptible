@@ -1,3 +1,11 @@
+module "quorumpreempt-workload-identity" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  version = "7.3.0"
+  name = "quorumpreempt-sa"
+  namespace = "default"
+  project_id = var.project
+}
+
 provider "google" {
   version     = "3.4.0"
 #  credentials = var.gcp_compute_api_key

@@ -14,6 +14,10 @@ variable "location" {
   type = string
 }
 
+variable "gcp_project_id" {
+  type = string
+}
+
 variable "daily_maintenance_window_start_time" {
   type = string
 }

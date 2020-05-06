@@ -2,16 +2,6 @@ locals {
   project = "quorumpreempt"
 }
 
-
-
-module "quorumpreempt-workload-identity" {
-  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
-  version = "7.3.0"
-  name = "quorumpreempt-sa"
-  namespace = "default"
-  project_id = var.project_id
-}
-
 module "cluster" {
 
   project                             = local.project
