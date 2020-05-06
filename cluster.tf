@@ -9,7 +9,7 @@ module "quorumpreempt-workload-identity" {
   version = "7.3.0"
   name = "quorumpreempt-sa"
   namespace = "default"
-  project = var.project_id
+  project_id = var.project_id
 }
 
 module "cluster" {
