@@ -5,6 +5,7 @@ locals {
 module "cluster" {
 
   project                             = local.project
+  gcp_project_id                      = var.project
   source                              = "./gke"
   region                              = "europe-west2"
   location                            = "europe-west2-a"
