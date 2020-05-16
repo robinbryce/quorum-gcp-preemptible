@@ -11,10 +11,10 @@ provider "google" {
 #  credentials = var.gcp_compute_api_key
 }
 
-provider "google-beta" {
-   version     = "3.5.0"
-#   credentials = var.gcp_compute_api_key
-}
+#provider "google-beta" {
+#   version     = "3.5.0"
+##   credentials = var.gcp_compute_api_key
+#}
 
 data "google_client_config" "provider" {}
 data "google_container_cluster" "quorumpreempt" {
@@ -56,7 +56,7 @@ resource "google_project_service" "container" {
 }
 
 resource "google_container_cluster" "k8s" {
-  provider           = google
+  provider           = google-beta
   name               = var.cluster_name
   project            = var.project
   depends_on         = [google_project_service.container]
@@ -72,6 +72,10 @@ resource "google_container_cluster" "k8s" {
   network    = google_compute_network.gke-network.self_link
   subnetwork = google_compute_subnetwork.gke-subnet.self_link
 
+  workload_identity_config {
+    identity_namespace = "${data.google_container_cluster.quorumpreempt.project}.svc.id.goog"
+  }
+
   private_cluster_config {
     master_ipv4_cidr_block  = var.master_ipv4_cidr_block
     enable_private_nodes    = var.enable_private_nodes
@@ -81,9 +85,5 @@ resource "google_container_cluster" "k8s" {
   ip_allocation_policy {
     cluster_secondary_range_name  = var.cluster_range_name
     services_secondary_range_name = var.services_range_name
-  }
-
-  workload_identity_config {
-    identity_namespace = "${data.google_project.project.project_id}.svc.id.goog"
   }
 }
