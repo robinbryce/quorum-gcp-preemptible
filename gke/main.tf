@@ -16,6 +16,21 @@ provider "google-beta" {
 #   credentials = var.gcp_compute_api_key
 }
 
+data "google_client_config" "provider" {}
+data "google_container_cluster" "quorumpreempt" {
+  name = var.cluster_name
+  location = var.location
+}
+
+provider "kubernetes" {
+  load_config_file = false
+  host = "https://${data.google_container_cluster.quorumpreempt.endpoint}"
+  token = data.google_client_config.provider.access_token
+  cluster_ca_certificate = base64decode(
+    data.google_container_cluster.quorumpreempt.master_auth[0].cluster_ca_certificate,
+  )
+}
+
 resource "google_project_service" "cloudresourcemanager" {
   project = var.project
   service = "cloudresourcemanager.googleapis.com"
