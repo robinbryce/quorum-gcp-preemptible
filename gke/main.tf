@@ -82,4 +82,8 @@ resource "google_container_cluster" "k8s" {
     cluster_secondary_range_name  = var.cluster_range_name
     services_secondary_range_name = var.services_range_name
   }
+
+  workload_identity_config {
+    identity_namespace = "${data.google_project.project.project_id}.svc.id.goog"
+  }
 }
