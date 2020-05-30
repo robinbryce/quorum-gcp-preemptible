@@ -90,6 +90,7 @@ resource "google_container_cluster" "k8s" {
 
 resource "google_storage_bucket" "cluster" {
   name = "${var.project}-cluster.${var.gcp_buckets_tld}"
+  project = var.project
   location = var.location
   storage_class = "STANDARD"
 }
