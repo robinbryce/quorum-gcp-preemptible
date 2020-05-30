@@ -91,6 +91,7 @@ resource "google_container_cluster" "k8s" {
 resource "google_storage_bucket" "cluster" {
   name = "${var.project}-cluster.${var.gcp_buckets_tld}"
   project = var.project
-  location = var.location
+  # location is the 'region' here!
+  location = var.region
   storage_class = "STANDARD"
 }
