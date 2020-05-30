@@ -18,6 +18,12 @@ variable "gcp_project_id" {
   type = string
 }
 
+variable "gcp_buckets_tld" {
+  # must have been verified, see
+  # https://cloud.google.com/storage/docs/domain-name-verification
+  type = string
+}
+
 variable "daily_maintenance_window_start_time" {
   type = string
 }

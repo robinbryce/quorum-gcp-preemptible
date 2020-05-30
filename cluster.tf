@@ -6,6 +6,7 @@ module "cluster" {
 
   project                             = local.project
   gcp_project_id                      = local.project
+  gcp_buckets_tld                     = "g.buckets.thaumagen.com"
   source                              = "./gke"
   region                              = "europe-west2"
   location                            = "europe-west2-a"

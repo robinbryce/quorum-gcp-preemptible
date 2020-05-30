@@ -20,7 +20,7 @@ data "google_client_config" "provider" {}
 data "google_container_cluster" "quorumpreempt" {
   name = var.cluster_name
   location = var.location
-  project            = var.project
+  project = var.project
 }
 
 provider "kubernetes" {
@@ -86,4 +86,10 @@ resource "google_container_cluster" "k8s" {
     cluster_secondary_range_name  = var.cluster_range_name
     services_secondary_range_name = var.services_range_name
   }
+}
+
+resource "google_storage_bucket" "cluster" {
+  name = "${var.project}-cluster.${var.gcp_buckets_tld}"
+  location = var.location
+  storage_class = "STANDARD"
 }
