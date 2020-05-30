@@ -89,7 +89,9 @@ resource "google_container_cluster" "k8s" {
 }
 
 resource "google_storage_bucket" "cluster" {
-  name = "${var.project}-cluster.${var.gcp_buckets_tld}"
+  # name = "${var.project}-cluster.${var.gcp_buckets_tld}"
+  # quorumpreempt-cluster.g.buckets.thaumagen.com | shasum
+  name = "b9f115a33a0ff161cc64aa79b35fd2005c6859ce"
   project = var.project
   # location is the 'region' here!
   location = var.region
