@@ -14,10 +14,26 @@ module "quourm-genesis" {
   project_id = var.project
 }
 
-module "quourm-member" {
+module "quourm-membership" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
-  name = "quorum-member-sa"
+  name = "quorum-membership-sa"
+  namespace = "default"
+  project_id = var.project
+}
+
+module "quourm-node" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  version = "7.3.0"
+  name = "quorum-node-sa"
+  namespace = "default"
+  project_id = var.project
+}
+
+module "quourm-client" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  version = "7.3.0"
+  name = "quorum-client-sa"
   namespace = "default"
   project_id = var.project
 }
