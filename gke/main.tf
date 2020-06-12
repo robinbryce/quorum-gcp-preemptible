@@ -130,3 +130,22 @@ resource "google_storage_bucket" "cluster" {
   location = var.region
   storage_class = "STANDARD"
 }
+
+data "google_iam_policy" "cluster_bucket_object_writer" {
+  binding {
+    role = "roles/storage.objectAdmin"
+    members = [
+      "${modules.quourm-genesis.gcp_service_account_fqdn}"
+    ]
+  }
+}
+
+resource "google_storage_bucket_iam_policy" "cluster_bucket_policy" {
+  bucket = google_storage_bucket.cluster.name
+  policy_data = data.google_iam_policy.cluster_bucket_object_writer
+}
+
+#data "google_iam_policy" "cluster_bucket_object_reader" {
+## roles/storage.objectViewer
+#}
+
