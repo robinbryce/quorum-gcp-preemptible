@@ -25,6 +25,8 @@ module "cluster" {
   logging_service                     = "none" # $$$
   monitoring_service                  = "none" # $$$
 
+  # TODO: seperately define the node pools, recomendation here
+  # https://www.terraform.io/docs/providers/google/guides/using_gke_with_terraform.html
   node_pools = {
     ingress-pool = {
       machine_type       = "g1-small" # $$$

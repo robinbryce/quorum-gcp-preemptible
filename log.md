@@ -1,6 +1,44 @@
 2020-05-30
 ----------
 
+https://console.cloud.google.com/storage/browser/quorumpreempt-cluster.g.buckets.thaumagen.com
+
+test workload identity config
+* https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+kubectl run -it \
+  --generator=run-pod/v1 \
+  --image google/cloud-sdk:slim \
+  --serviceaccount quorumpreempt-sa \
+  --namespace default workload-identity-test
+gcloud auth list
+It will show the kluster-serviceaccount as the active account.
+kubectl run -it --generator=run-pod/v1 --image google/cloud-sdk:slim --serviceaccount quorumpreempt-sa --namespace default workload-identity-test
+gcloud auth print-identity-token
+
+storage get auth
+* https://cloud.google.com/storage/docs/authentication
+* https://cloud.google.com/storage/docs/uploading-objectsjjjjjjj
+TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token)
+curl -H "Authorization: Bearer $TOKEN" https://storage.googleapis.com/storage/v1/b/quorumpreempt-cluster.g.buckets.thaumagen.com/o/hello.txt?alt=media
+
+curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience="http://whatever.fo.bar" JWT Identity
+* https://cloud.google.com/community/tutorials/gke-workload-id-clientserver
+*
+https://debricked.com/blog/2020/02/17/using-workload-identity-to-handle-keys-in-google-kubernetes-engine/jjjk
+
+google_storage_bucket
+* needs project name if its not set on provider
+* 'location' is the var.region not var.location eg europe-west2 rather than europe-west2-a
+* may need to "Additionally, if you are using an api to create the bucket
+    automagically, the service account needs to be added as an additional owner
+    to the verified domain "
+
+* verify dns name owner ship for service account
+* add the default cpe serviec account as a delegate onwer for the property (may be able to reduce that)
+* https://stackoverflow.com/questions/39333431/how-to-enable-additional-users-to-create-domain-named-buckets-in-google-cloud-st
+* "671079552178-compute@developer.gserviceaccount.com" (default cpe
+    service account)
+
 Object storage.
 
 Verify ownership of a domain for bucket name OR use a UUID
@@ -26,10 +64,17 @@ Also, 'create-only-if-new' precondition match on generation 0
 
 * https://cloud.google.com/storage/docs/creating-buckets
 * https://cloud.google.com/storage/docs/domain-name-verification
-*
 
 ACLs vs Cloud IAM
 * https://cloud.google.com/storage/docs/uniform-bucket-level-access
+*
+Terraform
+.........
+Best practices (how its expected to be used)
+* https://www.terraform.io/docs/cloud/guides/recommended-practices/part1.html
+
+For when breaking up the exmample makes sense
+* https://www.terraform.io/docs/providers/terraform/d/remote_state.html
 
 
 2020-05-16
@@ -48,7 +93,9 @@ in terraform using workload_identity_config doesn't appear to work.
 * https://www.terraform.io/docs/providers/google/guides/using_gke_with_terraform.html
 * https://learn.hashicorp.com/terraform/kubernetes/provision-gke-cluster
 
-Waiting seems to be the anser to being stuck 'preparing plan'
+Waiting seems to be the anser to being stuck 'preparing plan' - ah, no it was
+absence of .terraformignore  'preparing plan' was trying to copy gigabytes of
+data from the local .git tree
 
 Though also ensured the following envs were set
 

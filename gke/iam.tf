@@ -1,3 +1,7 @@
+
+# -----------------------------------------------------------------------------
+# cluster service account and role
+# -----------------------------------------------------------------------------
 resource "google_project_iam_custom_role" "kluster" {
   role_id = "kluster"
   title   = "kluster Role"
@@ -24,7 +28,6 @@ resource "google_project_iam_custom_role" "kluster" {
   ]
 }
 
-# cluster service account
 resource "google_service_account" "kluster" {
 
   account_id = "kluster-serviceaccount"
@@ -40,6 +43,9 @@ resource "google_project_iam_member" "iam_member_kluster" {
   depends_on = [google_service_account.kluster]
 }
 
+# -----------------------------------------------------------------------------
+# kubeip service account and role
+# -----------------------------------------------------------------------------
 resource "google_project_iam_custom_role" "kubeip" {
   role_id = "kubeip"
   title   = "kubeip Role"
@@ -64,7 +70,6 @@ resource "google_project_iam_custom_role" "kubeip" {
   ]
 }
 
-# kubeip service account
 resource "google_service_account" "kubeip" {
   account_id = "kubeip-serviceaccount"
   project    = var.project

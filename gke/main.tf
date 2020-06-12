@@ -6,6 +6,22 @@ module "quorumpreempt-workload-identity" {
   project_id = var.project
 }
 
+module "quourm-genesis" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  version = "7.3.0"
+  name = "quorum-genesis-sa"
+  namespace = "default"
+  project_id = var.project
+}
+
+module "quourm-member" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  version = "7.3.0"
+  name = "quorum-member-sa"
+  namespace = "default"
+  project_id = var.project
+}
+
 provider "google" {
   version     = "3.4.0"
 #  credentials = var.gcp_compute_api_key
@@ -75,7 +91,6 @@ resource "google_container_cluster" "k8s" {
   workload_identity_config {
     identity_namespace = "${data.google_container_cluster.quorumpreempt.project}.svc.id.goog"
   }
-
   private_cluster_config {
     master_ipv4_cidr_block  = var.master_ipv4_cidr_block
     enable_private_nodes    = var.enable_private_nodes
@@ -89,8 +104,8 @@ resource "google_container_cluster" "k8s" {
 }
 
 resource "google_storage_bucket" "cluster" {
-  # requires kluster-serviceaccount@${var.project}.iam.gserviceaccount.com as
-  # delegated owner of gcp_buckets_tld
+  # requires that the cpe default service account is added as a delegated
+  # owner at https://www.google.com/webmasters/verification
   name = "${var.project}-cluster.${var.gcp_buckets_tld}"
   # quorumpreempt-cluster.g.buckets.thaumagen.com | shasum
   # name = "b9f115a33a0ff161cc64aa79b35fd2005c6859ce"
