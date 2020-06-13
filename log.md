@@ -9,6 +9,17 @@ Read
   - Policy to define who has what access on a particular resource, create a
       policy and attach it to the resource.
 
+  - policy has many bindings
+    - each binding is many members to 1 role
+    - P{B{m[1-n], r[1]}} => resource (eg, bucket)
+    -
+
+terraform taint module.cluster.google_storage_bucket.cluster to force deletion
+and re-cration of identified resource
+
+?? Do I need to include myself (and other accounts) explicitly in bucket role
+bindings if I set any at all ??
+
 2020-05-30
 ----------
 
