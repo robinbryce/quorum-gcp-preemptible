@@ -1,3 +1,14 @@
+2020-06-13
+----------
+Read
+* https://cloud.google.com/iam/docs/overview
+  Member/Role/Policy nomenclature
+  - Members are identified as an email address for a user, service account or
+      google group, or a domain name thing (Cloud Identity Domains, GSuite)
+  - Roles are granted to members
+  - Policy to define who has what access on a particular resource, create a
+      policy and attach it to the resource.
+
 2020-05-30
 ----------
 

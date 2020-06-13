@@ -131,18 +131,30 @@ resource "google_storage_bucket" "cluster" {
   storage_class = "STANDARD"
 }
 
-data "google_iam_policy" "quorum_genesis_object_admin" {
-  binding {
-    role = "roles/storage.objectAdmin"
-    members = [
-      "${module.quorum-genesis.gcp_service_account_email}"
-    ]
-  }
+# bind the quorum-genesis sa to the policy for the cluster bucket.
+# * https://cloud.google.com/iam/docs/overview
+# * https://www.terraform.io/docs/providers/google/r/storage_bucket_iam.html
+# Note setting the *whole* policy clobbers any existing policy already on the
+# resource - hence google_storage_bucket_iam_policy is a bit of a shotgun and
+# binding is prefered as it is additive.
+resource "google_storage_bucket_iam_binding" "cluster_bucket_members_admin" {
+  bucket = google_storage_bucket.cluster.name
+  role = "roles/storage.objectAdmin"
+  members = [
+    "${module.quorum-genesis.gcp_service_account_fqn}",
+    "${module.quorum-membership.gcp_service_account_fqn}"
+  ]
 }
 
-resource "google_storage_bucket_iam_policy" "cluster_bucket_policy" {
+resource "google_storage_bucket_iam_binding" "cluster_bucket_members_view" {
   bucket = google_storage_bucket.cluster.name
-  policy_data = data.google_iam_policy.quorum_genesis_object_admin.policy_data
+  role = "roles/storage.objectViewer"
+  members = [
+    "${module.quorum-genesis.gcp_service_account_fqn}",
+    "${module.quorum-membership.gcp_service_account_fqn}",
+    "${module.quorum-node.gcp_service_account_fqn}",
+    "${module.quorum-client.gcp_service_account_fqn}"
+  ]
 }
 
 #data "google_iam_policy" "cluster_bucket_object_reader" {
