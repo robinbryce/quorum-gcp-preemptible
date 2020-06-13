@@ -104,22 +104,22 @@ resource "google_storage_bucket_iam_binding" "cluster_bucket_project_members_vie
 # Note setting the *whole* policy clobbers any existing policy already on the
 # resource - hence google_storage_bucket_iam_policy is a bit of a shotgun and
 # binding is prefered as it is additive.
-resource "google_storage_bucket_iam_binding" "cluster_bucket_quorum_members_admin" {
-  bucket = google_storage_bucket.cluster.name
-  role = "roles/storage.objectAdmin"
-  members = [
-    "${module.quorum-genesis.gcp_service_account_fqn}",
-    "${module.quorum-membership.gcp_service_account_fqn}"
-  ]
-}
-
-resource "google_storage_bucket_iam_binding" "cluster_bucket_quorum_members_view" {
-  bucket = google_storage_bucket.cluster.name
-  role = "roles/storage.objectViewer"
-  members = [
-    "${module.quorum-genesis.gcp_service_account_fqn}",
-    "${module.quorum-membership.gcp_service_account_fqn}",
-    "${module.quorum-node.gcp_service_account_fqn}",
-    "${module.quorum-client.gcp_service_account_fqn}"
-  ]
-}
+#resource "google_storage_bucket_iam_binding" "cluster_bucket_quorum_members_admin" {
+#  bucket = google_storage_bucket.cluster.name
+#  role = "roles/storage.objectAdmin"
+#  members = [
+#    "${module.quorum-genesis.gcp_service_account_fqn}",
+#    "${module.quorum-membership.gcp_service_account_fqn}"
+#  ]
+#}
+#
+#resource "google_storage_bucket_iam_binding" "cluster_bucket_quorum_members_view" {
+#  bucket = google_storage_bucket.cluster.name
+#  role = "roles/storage.objectViewer"
+#  members = [
+#    "${module.quorum-genesis.gcp_service_account_fqn}",
+#    "${module.quorum-membership.gcp_service_account_fqn}",
+#    "${module.quorum-node.gcp_service_account_fqn}",
+#    "${module.quorum-client.gcp_service_account_fqn}"
+#  ]
+#}
