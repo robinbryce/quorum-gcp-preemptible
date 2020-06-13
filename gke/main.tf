@@ -140,21 +140,23 @@ resource "google_storage_bucket" "cluster" {
 resource "google_storage_bucket_iam_binding" "cluster_bucket_members_admin" {
   bucket = google_storage_bucket.cluster.name
   role = "roles/storage.objectAdmin"
-  members = [
+  members = concat(
+    var.members_bucket_admins, [
     "${module.quorum-genesis.gcp_service_account_fqn}",
     "${module.quorum-membership.gcp_service_account_fqn}"
-  ]
+  ])
 }
 
 resource "google_storage_bucket_iam_binding" "cluster_bucket_members_view" {
   bucket = google_storage_bucket.cluster.name
   role = "roles/storage.objectViewer"
-  members = [
+  members = concat(
+    var.members_bucket_admins, [
     "${module.quorum-genesis.gcp_service_account_fqn}",
     "${module.quorum-membership.gcp_service_account_fqn}",
     "${module.quorum-node.gcp_service_account_fqn}",
     "${module.quorum-client.gcp_service_account_fqn}"
-  ]
+  ])
 }
 
 #data "google_iam_policy" "cluster_bucket_object_reader" {

@@ -6,6 +6,11 @@ variable "cluster_name" {
   type = string
 }
 
+variable "members_bucket_admins" {
+  type = list(string)
+  default = ["user:robinbryce@gmail.com"]
+}
+
 variable "region" {
   type = string
 }
