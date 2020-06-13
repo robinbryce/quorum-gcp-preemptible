@@ -6,7 +6,7 @@ module "quorumpreempt-workload-identity" {
   project_id = var.project
 }
 
-module "quourm-genesis" {
+module "quorum-genesis" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-genesis-sa"
@@ -14,7 +14,7 @@ module "quourm-genesis" {
   project_id = var.project
 }
 
-module "quourm-membership" {
+module "quorum-membership" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-membership-sa"
@@ -22,7 +22,7 @@ module "quourm-membership" {
   project_id = var.project
 }
 
-module "quourm-node" {
+module "quorum-node" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-node-sa"
@@ -30,7 +30,7 @@ module "quourm-node" {
   project_id = var.project
 }
 
-module "quourm-client" {
+module "quorum-client" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-client-sa"
@@ -135,14 +135,14 @@ data "google_iam_policy" "cluster_bucket_object_writer" {
   binding {
     role = "roles/storage.objectAdmin"
     members = [
-      "${modules.quourm-genesis.gcp_service_account_fqdn}"
+      "${module.quorum-genesis.gcp_service_account_fqn}"
     ]
   }
 }
 
 resource "google_storage_bucket_iam_policy" "cluster_bucket_policy" {
   bucket = google_storage_bucket.cluster.name
-  policy_data = data.google_iam_policy.cluster_bucket_object_writer
+  policy_data = data.google_iam_policy.cluster_bucket_object_writer.policy_data
 }
 
 #data "google_iam_policy" "cluster_bucket_object_reader" {
