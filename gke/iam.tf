@@ -86,17 +86,6 @@ resource "google_project_iam_member" "iam_member_kubeip" {
 # -----------------------------------------------------------------------------
 # cluster storage bucket iam bindings
 # -----------------------------------------------------------------------------
-#resource "google_storage_bucket_iam_binding" "cluster_bucket_project_members_admin" {
-#  bucket = google_storage_bucket.cluster.name
-#  role = "roles/storage.objectAdmin"
-#  members = var.members_bucket_admins
-#}
-#
-#resource "google_storage_bucket_iam_binding" "cluster_bucket_project_members_view" {
-#  bucket = google_storage_bucket.cluster.name
-#  role = "roles/storage.objectViewer"
-#  members = var.members_bucket_admins
-#}
 
 # Set the appropriate iam member and roles for quourm service account. This is additive
 #
@@ -105,11 +94,11 @@ resource "google_project_iam_member" "iam_member_kubeip" {
 # * https://www.terraform.io/docs/providers/google/r/storage_bucket_iam.html
 # Notes
 # * policy - setting the *whole* policy clobbers any existing policy already on the
-#   resource - hence google_storage_bucket_iam_policy is a bit of a shotgun and
-#   binding is prefered as it is additive.
+#   resource - hence google_storage_bucket_iam_policy is a bit of a shotgun/foot.
 # * binding - sets *all* members (discarding previous) for a particular role.
 #   After application, any previous members are dropped. no other (previous) members 
-resource "google_storage_bucket_iam_member" "cluster_bucket_quorum_members_admin" {
+# * member - not authorative (additive)
+resource "google_storage_bucket_iam_member" "cluster_bucket_quorum_members" {
   for_each = {
     genesis_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-genesis.gcp_service_account_fqn}"]
     membership_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-membership.gcp_service_account_fqn}"]
@@ -122,15 +111,3 @@ resource "google_storage_bucket_iam_member" "cluster_bucket_quorum_members_admin
   role = each.value[0]
   member = each.value[1]
 }
-
-#
-#resource "google_storage_bucket_iam_binding" "cluster_bucket_quorum_members_view" {
-#  bucket = google_storage_bucket.cluster.name
-#  role = "roles/storage.objectViewer"
-#  members = [
-#    "${module.quorum-genesis.gcp_service_account_fqn}",
-#    "${module.quorum-membership.gcp_service_account_fqn}",
-#    "${module.quorum-node.gcp_service_account_fqn}",
-#    "${module.quorum-client.gcp_service_account_fqn}"
-#  ]
-#}
