@@ -23,6 +23,9 @@ bindings if I set any at all ??
 2020-05-30
 ----------
 
+
+Consider using - https://github.com/terraform-google-modules/terraform-google-iam/tree/master/modules/storage_buckets_iam
+
 https://console.cloud.google.com/storage/browser/quorumpreempt-cluster.g.buckets.thaumagen.com
 
 test workload identity config
