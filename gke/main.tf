@@ -131,18 +131,18 @@ resource "google_storage_bucket" "cluster" {
   storage_class = "STANDARD"
 }
 
-data "google_iam_policy" "cluster_bucket_object_writer" {
+data "google_iam_policy" "quorum_genesis_object_admin" {
   binding {
     role = "roles/storage.objectAdmin"
     members = [
-      "${module.quorum-genesis.gcp_service_account_fqn}"
+      "${module.quorum-genesis.gcp_service_account_email}"
     ]
   }
 }
 
 resource "google_storage_bucket_iam_policy" "cluster_bucket_policy" {
   bucket = google_storage_bucket.cluster.name
-  policy_data = data.google_iam_policy.cluster_bucket_object_writer.policy_data
+  policy_data = data.google_iam_policy.quorum_genesis_object_admin.policy_data
 }
 
 #data "google_iam_policy" "cluster_bucket_object_reader" {
