@@ -2,7 +2,7 @@ module "workload-identity-kubeip" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "kubeip-sa"
-  namespace = "default"
+  namespace = "kube-system"
   project_id = var.project
 }
 
