@@ -99,6 +99,7 @@ resource "google_project_iam_member" "iam_member_kubeip" {
 #   After application, any previous members are dropped. no other (previous) members 
 # * member - not authorative (additive)
 resource "google_storage_bucket_iam_member" "cluster_bucket_quorum_members" {
+  # TODO: configure this in module "cluster" like we do for the node pools
   for_each = {
     genesis_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-genesis.gcp_service_account_fqn}"]
     membership_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-membership.gcp_service_account_fqn}"]

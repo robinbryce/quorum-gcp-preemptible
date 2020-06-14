@@ -1,5 +1,25 @@
+2020-06-14
+----------
+
+2020-06-14
+----------
+* tainting the node_pools and re-deploying seems to have added the metadata
+    service (I don't remember it being their before) and wl identity now works
+* ksa exists
+name: quorum-genesis-sa
+annotations: iam.gke.io/gcp-service-account: quorum-genesis-sa@quorumpreempt.iam.gserviceaccount.com
+* gsa exists
+*
+Resource name: projects/-/serviceAccounts/110505095429605190975
+Resource: projects/quorumpreempt/serviceAccounts/quorum-genesis-sa@quorumpreempt.iam.gserviceaccount.com
+members: serviceAccount:quorumpreempt.svc.id.goog[default/quorum-genesis-sa]
+role: roles/iam.workloadIdentityUser
+
+
 2020-06-13
 ----------
+
+
 Read
 * https://cloud.google.com/iam/docs/overview
   Member/Role/Policy nomenclature
@@ -18,7 +38,8 @@ terraform taint module.cluster.google_storage_bucket.cluster to force deletion
 and re-cration of identified resource
 
 ?? Do I need to include myself (and other accounts) explicitly in bucket role
-bindings if I set any at all ??
+bindings if I set any at all ?? - Only if using authorative (policy or
+binding), non authorative member is additive.
 
 2020-05-30
 ----------
@@ -43,7 +64,19 @@ gcloud auth print-identity-token
 storage get auth
 * https://cloud.google.com/storage/docs/authentication
 * https://cloud.google.com/storage/docs/uploading-objectsjjjjjjj
-TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token)
+*
+apt-get install jq
+TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
+
+upload
+
+echo "hello workload" > hello.txt
+curl -X POST --data-binary @hello.txt \
+-H "Authorization: Bearer ${TOKEN}" \
+-H "Content-Type: text/plain" \
+"https://storage.googleapis.com/upload/storage/v1/b/quorumpreempt-cluster.g.buckets.thaumagen.com/o?uploadType=media&name=hello.txt"
+
+download
 curl -H "Authorization: Bearer $TOKEN" https://storage.googleapis.com/storage/v1/b/quorumpreempt-cluster.g.buckets.thaumagen.com/o/hello.txt?alt=media
 
 curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience="http://whatever.fo.bar" JWT Identity

@@ -24,6 +24,7 @@ resource "google_container_node_pool" "custom_nodepool" {
     disk_type       = lookup(each.value, "disk_type", "pd-standard")
     image_type      = lookup(each.value, "image_type", "COS")
     preemptible     = lookup(each.value, "preemptible", true)
+
     service_account = lookup(each.value, "service_account", "")
     oauth_scopes    = var.node_pools_oauth_scopes["custom-node-pool"]
 
@@ -39,6 +40,5 @@ resource "google_container_node_pool" "custom_nodepool" {
         value  = taint.value.value
       }
     }
-
   }
 }
