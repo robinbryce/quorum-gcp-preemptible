@@ -1,0 +1,27 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kubeip-sa
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeip-sa
+subjects:
+  - kind: ServiceAccount
+    name: kubeip-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: kubeip-sa
+  apiGroup: rbac.authorization.k8s.io
