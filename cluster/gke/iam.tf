@@ -77,10 +77,12 @@ resource "google_service_account" "kubeip" {
 
 resource "google_project_iam_member" "iam_member_kubeip" {
 
-  role       = "projects/${var.project}/roles/kubeip"
+  depends_on = [google_project_iam_custom_role.kubeip]
   project    = var.project
-  member     = "serviceAccount:kubeip-serviceaccount@${var.project}.iam.gserviceaccount.com"
-  depends_on = [google_service_account.kubeip]
+  role       = "projects/${var.project}/roles/kubeip"
+  member     = module.workload-identity-kubeip.gcp_service_account_fqn
+  # member     = "serviceAccount:kubeip-serviceaccount@${var.project}.iam.gserviceaccount.com"
+  # depends_on = [google_service_account.kubeip]
 }
 
 # -----------------------------------------------------------------------------

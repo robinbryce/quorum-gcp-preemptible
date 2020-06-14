@@ -1,5 +1,6 @@
 2020-06-14
 ----------
+Lets try and use workload identity for kubeip
 
 2020-06-14
 ----------
