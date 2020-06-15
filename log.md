@@ -2,6 +2,21 @@
 ----------
 Lets try and use workload identity for kubeip
 
+The workspace-identity terraform modules create k8s service accounts with::
+
+    automountServiceAccountToken: false
+
+This is the secure default. pod's can set this explicitly if they need it. The
+kubeip pod needs it. Once this is done, worload identity just works. No need
+for GOOGLE_APPLICATION_CREDENTIALS or fetching tokens or epxlicitly managing
+keys in secrets
+
+Note it turns out that the google sdk client libraries "DefaultClient"
+implementation are workload identity aware. Provided other established
+mechanisms, such as GOOGLE_APPLICATION_CREDENTIALS, are not configured then it
+falls through to just asking the metadata server for a token - at which point
+it gets one.
+
 2020-06-14
 ----------
 * tainting the node_pools and re-deploying seems to have added the metadata
