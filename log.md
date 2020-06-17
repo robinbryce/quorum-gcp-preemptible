@@ -1,3 +1,40 @@
+
+----------
+auth bootstrapping
+gcloud init (to set all the defaults)
+gcloud container clusters get-credentials kluster
+gcloud auth application-default login
+
+TODO:
+* put nodekey enode on the key metadata (and the bit that requires importing the
+    account to derive)
+* use project per 'organisation'
+* Run python scripts via https://hub.docker.com/r/google/cloud-sdk and use the
+  docker client in that image to run local images
+
+* https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-access-for-kubectl
+
+2020-06-16
+----------
+* oauth consent screen & app registration is per project, so each seperate
+  organsiation needs a project probably
+
+2020-06-16
+----------
+* try this out: https://cloud.google.com/python/setup
+Pipenv
+
+2020-06-15
+----------
+* google secret manager service is the right answer for application secrets and
+  passwords. google cloud kms it expensive for a personal project
+* anoyingly, workload-identity is currently incompatible with isio side car
+    injection (at least without customisation)
+
+Install skaffold
+default setup almost just works. traefik taints only permit one instance so the
+replacement is stuck pending until the old instance is manually deleted
+
 2020-06-14
 ----------
 Lets try and use workload identity for kubeip

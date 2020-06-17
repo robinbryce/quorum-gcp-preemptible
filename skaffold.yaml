@@ -1,0 +1,24 @@
+apiVersion: skaffold/v2beta5
+kind: Config
+metadata:
+  name: quorum-gcp-preemptible
+build:
+  artifacts:
+  - image: eu.gcr.io/quorumpreempt/nginx-web
+    context: nginx-alpine
+deploy:
+  kubectl:
+    manifests:
+    - k8s/kubeip/clusterrole.yaml
+    - k8s/kubeip/configmap.yaml
+    - k8s/kubeip/deployment.yaml
+    - k8s/nginx-web/deployment.yaml
+    - k8s/nginx-web/namespace.yaml
+    - k8s/nginx-web/service.yaml
+    - k8s/traefik/configmap.yaml
+    - k8s/traefik/deployment.yaml
+    - k8s/traefik/namespace.yaml
+    - k8s/traefik/resource.yaml
+    - k8s/traefik/route.yaml
+    - k8s/traefik/secret.yaml
+    - k8s/traefik/serviceaccount.yaml
