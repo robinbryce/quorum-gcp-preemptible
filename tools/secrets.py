@@ -112,7 +112,7 @@ def cmd_create_wallet(args):
             (args.name + "pub", pub),
             (args.name + "address", addr),
             (args.name + "password", passwd)]:
-            s, v = create_secret(args, name, data, **labels)
+        s, v = create_secret(args, name, data, **labels)
         print(f"secret: {s.name}, version: {v.name}")
 
 

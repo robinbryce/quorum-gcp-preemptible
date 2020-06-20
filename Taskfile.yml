@@ -1,32 +1,45 @@
 # https://taskfile.dev
 version: '2'
 
+vars:
+  MAX_NODE_IDX: 2
+
 tasks:
   nodekeys:
     desc: ensure all node secrets exist in gcp
     cmds:
       - |
-        for i in $(seq 0 2)
+        for i in $(seq 0  {{.MAX_NODE_IDX}})
         do
           tools/secrets.sh nodekey qnode-$i-
           tools/secrets.sh wallet qnode-$i-wallet-
         done
+    silent: true
 
   tf-import-nodekeys:
     desc: import secret manager secrets (not values) into terraform
     dir: cluster
     cmds:
       - |
-        for i in $(seq 0 2)
-        do
-        terraform import \
-          -provider=google-beta \
-          module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-key\"] \
-          projects/quorumpreempt/secrets/qnode-$i-key
-
-        terraform import \
-          -provider=google-beta \
-          module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-enode\"] \
-          projects/quorumpreempt/secrets/qnode-$i-enode
+        for i in $(seq 0 {{.MAX_NODE_IDX}}); do
+          for kind in key enode; do
+            terraform import \
+              module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-$kind\"] \
+              projects/quorumpreempt/secrets/qnode-$i-$kind
+          done
         done
-    # silent: true
+    silent: true
+  tf-rmstate-nodekeys:
+    desc: remove secret manager secrets DELETES THE KEYS
+    dir: cluster
+    cmds:
+      - |
+        echo "This DELETES THE KEYS EDIT. Edit the task file to confirm"
+        exit 1
+        for i in $(seq 0 {{.MAX_NODE_IDX}}); do
+          for kind in key enode; do
+          terraform state rm \
+            module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-$kind\"]
+          done
+        done
+    silent: true
