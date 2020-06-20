@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qnode
+spec:
+  selector:
+    matchLabels:
+      app: qnode  # Label selector that determines which Pods belong to the StatefulSet
+                  # Must match spec: template: metadata: labels
+  serviceName: "qnode"
+  replicas: 1  # default nodes per deployments (1 is fine), sans istio kubectl scale adds nodes
+  template:
+    metadata:
+      labels:
+        app: qnode # Pod template's label selector
+    spec:
+      serviceAccountName: quorum-node-sa
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: qnode
+        image: k8s.gcr.io/nginx-slim:0.8
+        ports:
+        - containerPort: 30303
+          name: tcp-peer
+        - containerPort: 8545
+          name: tcp-rpc
+        - containerPort: 8546
+          name: tcp-wsock
+        volumeMounts:
+        - name: quorum-pv
+          mountPath: /var/lib/quorum
+  volumeClaimTemplates:
+  - metadata:
+      name: quorum-pv
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 4Gi

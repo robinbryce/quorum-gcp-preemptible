@@ -1,10 +1,12 @@
 locals {
   project = "quorumpreempt"
+  max_quorum_nodes = 3
 }
 
 module "cluster" {
 
   project                             = local.project
+  max_quorum_nodes                    = local.max_quorum_nodes
   gcp_project_id                      = local.project
   gcp_buckets_tld                     = "g.buckets.thaumagen.com"
   source                              = "./gke"

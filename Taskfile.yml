@@ -1,0 +1,32 @@
+# https://taskfile.dev
+version: '2'
+
+tasks:
+  nodekeys:
+    desc: ensure all node secrets exist in gcp
+    cmds:
+      - |
+        for i in $(seq 0 2)
+        do
+          tools/secrets.sh nodekey qnode-$i-
+          tools/secrets.sh wallet qnode-$i-wallet-
+        done
+
+  tf-import-nodekeys:
+    desc: import secret manager secrets (not values) into terraform
+    dir: cluster
+    cmds:
+      - |
+        for i in $(seq 0 2)
+        do
+        terraform import \
+          -provider=google-beta \
+          module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-key\"] \
+          projects/quorumpreempt/secrets/qnode-$i-key
+
+        terraform import \
+          -provider=google-beta \
+          module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-enode\"] \
+          projects/quorumpreempt/secrets/qnode-$i-enode
+        done
+    # silent: true

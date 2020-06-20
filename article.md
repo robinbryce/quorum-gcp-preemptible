@@ -4,7 +4,7 @@
 
 Run a cloud hosted 'consortia' style private dlt for less than £50 per month.
 The deploymenent is aimed at developers wanting exposure to 'production'
-techniques and tools without imposing 'production' costs.
+tools & techniques without imposing 'production' costs (time and money)
 
 Inspired by and extending [k8s for cheap on google cloud](https://dev.to/verkkokauppacom/how-to-kubernetes-for-cheap-on-google-cloud-1aei)
 
@@ -56,6 +56,14 @@ This may not be perfectly realizable. This is a list of things that affect it.
 * google cloud project setup
 * tf cloud setup
 * git commit
+
+### Auth bootstrap (dev cli)
+
+auth bootstrapping
+
+    gcloud init (to set all the defaults)
+    gcloud container clusters get-credentials kluster
+    gcloud auth application-default login
 
 ### StatefulSet
 
@@ -146,8 +154,131 @@ Upload:
         -H "Content-Type: text/plain" \
         "https://storage.googleapis.com/upload/storage/v1/b/quorumpreempt-cluster.g.buckets.thaumagen.com/o?uploadType=media&name=hello.txt"
 
+### Secrets
+
+Terraforms posture on secret data in statefiles is [Stupid](https://github.com/hashicorp/terraform/issues/516)
+
+Terraform cloud's posture is [Better](https://www.terraform.io/docs/state/sensitive-data.html) but far from ideal
+
+With Google Secrets Manger the 'secret' and its 'version' are seperate things.
+The 'version' is the current value of the 'secret'. IAM policies are applied to
+the 'secret'. So, Use terraform to create the secret but use cli to set the
+version version (current value) - that way tf never sees the secret data at all
+but we can still use tf to manage the iam's for the secret
+
+But note that the tfstate has credentials to access the whole project so its
+still not a complete 'package'. Keys wrapped via Cloud KMS are probably the
+'belt and braces' answer but that is too much cost & work for a developer
+focused setup.
+
+Dev guides [Google - Secret Manager](https://cloud.google.com/solutions/secrets-management#tools)
+
+Using with terraform [Terraform and Secret Manager](https://www.sethvargo.com/managing-google-secret-manager-secrets-with-terraform/)
+
+Note that we _do not_ create the secret with terraform as that exposes the
+plain text in the state file. terrafor cloud encrypts that at rest but its
+still not great.
+
+#### Secret creation, terraform resource declaration & import
+
+We pre-create a bunch of keys and set the IAM's 'before the show'. Remote State
+and a TF project per node offers better granularity but a whole tf project per
+node is pretty heavy weight. Pre-creation of 'light weight' resources doesn't
+significantly impact our costs and is less faffy
 
 
+Create the secrets for the nodes. This requires some setup.
+
+See [requirements.txt](./tools/requirements.txt) and particularly
+* [Python - google-auth](https://pypi.org/project/google-auth/)
+* [Python - google-cloud-secret-manager](https://pypi.org/project/google-cloud-secret-manager/)
+
+XXX: TODO: Sort out a docker image for this (and dind arrangements for linux and mac)
+
+Run:
+
+    gcloud auth application-default login
+
+    scripts/secret.sh nodekey qnode-0
+    scripts/secret.sh nodekey qnode-1
+    scripts/secret.sh nodekey qnode-2
+
+Create the tf resource in the cluster module
+
+    resource "google_secret_manager_secret" "qnode" {
+      for_each = toset([
+        "qnode-0-key", "qnode-0-enode",
+        "qnode-1-key", "qnode-1-enode",
+        "qnode-2-key", "qnode-2-enode" ])
+      secret_id = each.key
+      replication = automatic
+    }
+
+Select appropriate version of beta provider in terraform.tf
+
+    required_providers {
+      google-beta = ">= 3.8"
+    }
+
+    terraform init  # to update provider if necessary can ommit
+
+Import the secret defintions
+
+    terraform import -provider=google-beta \
+        module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-0-enode\"] \
+        projects/quorumpreempt/secrets/qnode-0-enode
+
+Now go look at the contents of your tf state and convince yourself that the
+(public) enode address is not revlealed
+
+Now import the rest - do both the keys and th enodes now we know the keys wont
+get dumped into the tfstate.
+
+    terraform import -provider=google-beta \
+        module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-0-key\"] \
+        projects/quorumpreempt/secrets/qnode-0-key
+
+    for i $(seq 1 2)
+    do
+        terraform import -provider=google-beta \
+            module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-$i-enode\"] \
+            projects/quorumpreempt/secrets/qnode-$i-key
+        terraform import -provider=google-beta \
+            module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-$i-key\"] \
+            projects/quorumpreempt/secrets/qnode-$i-enode
+    done
+
+So we need to import the state
+
+[Terraform - Import](https://www.terraform.io/docs/import/index.html)
+[Terraform - Import Secret](https://www.terraform.io/docs/providers/google/r/secret_manager_secret.html#import)
+
+init container with service principal auth to get token.
+use curl to get secret via api
+
+    TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
+    curl "https://secretmanager.googleapis.com/v1/projects/project-id/secrets/secret-id/versions/version-id:access" \
+        --request "GET" \
+        --header "authorization: Bearer ${TOKEN}" \
+        --header "content-type: application/json" \
+        --header "x-goog-user-project: project-id"
+
+We store enode address alongside the key for convenience even though it is not
+secret - saves faffing with two different storage providers or having to
+re-derive the enode addr
+
+The init container gets the key every time - incase it roles. Caches most
+recent key on local disc. Two modes of operation:
+
+1. dev - if the key changes, force re-create the node (saving the old node
+   dir). maximum convenience for dev, not much risk to chain data
+2. prod - if key changes, refuse to start
+
+See also,
+* If you can afford it [Google KMS](https://medium.com/kudos-engineering/secret-management-in-kubernetes-and-gcp-the-journey-c76da8de96d8)
+* From the makers of kubeip [secrets-init](https://blog.doit-intl.com/kubernetes-and-secrets-management-in-cloud-858533c20dca)
+  Integrates with Google Secrets Manager and Google Workload Identity
+Glossy [Google - Secret Manager](https://cloud.google.com/secret-manager)
 
 ### Protocol Selection (Istio Compatibility) Ports and IP Assignment
 

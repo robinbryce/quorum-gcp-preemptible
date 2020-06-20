@@ -65,8 +65,14 @@ def create_secret(args, name, data, **labels):
     creds, project = get_defaults(args)
     c = sm.SecretManagerServiceClient(credentials=creds)
     parent = c.project_path(project)
-    s = c.create_secret(parent, name, dict(
-        replication=dict(automatic={}), labels=labels))
+
+    try:
+        s = c.create_secret(parent, name, dict(
+            replication=dict(automatic={}), labels=labels))
+    except ge.AlreadyExists:
+        resourcename = f"projects/{project}/secrets/{name}"
+        print(f"secret {args.name} exists, get: {resourcename}")
+        s = c.get_secret(resourcename)
     v = c.add_secret_version(s.name, dict(data=data))
     return s, v
 
@@ -102,15 +108,12 @@ def cmd_create_wallet(args):
     passwd = keccak_256(secrets.token_bytes(32)).digest()
 
     for name, data in [
-            (args.name + "-key", key),
-            (args.name + "-pub", pub),
-            (args.name + "-address", addr),
-            (args.name + "-wallet-password", passwd)]:
-        try:
+            (args.name + "key", key),
+            (args.name + "pub", pub),
+            (args.name + "address", addr),
+            (args.name + "password", passwd)]:
             s, v = create_secret(args, name, data, **labels)
-            print(f"secret: {s.name}, version: {v.name}")
-        except ge.AlreadyExists:
-            raise Error(f"secret {args.name} exists")
+        print(f"secret: {s.name}, version: {v.name}")
 
 
 def cmd_create_nodekey(args):
@@ -132,13 +135,10 @@ def cmd_create_nodekey(args):
     print(f"enodeaddr: {enodeaddr}")
 
     for name, data in [
-            (args.name + "-key", key),
-            (args.name + "-enode", enodeaddr)]:
-        try:
-            s, v = create_secret(args, name, data, **labels)
-            print(f"secret: {s.name}, version: {v.name}")
-        except ge.AlreadyExists:
-            raise Error(f"secret {name} exists")
+            (args.name + "key", key),
+            (args.name + "enode", enodeaddr)]:
+        s, v = create_secret(args, name, data, **labels)
+        print(f"secret: {s.name}, version: {v.name}")
 
 
 def cmd_create_tesserakey(args):
@@ -158,12 +158,11 @@ def cmd_create_tesserakey(args):
         key = json.dumps(json.load(open(Path(tmp).joinpath("tessera.key"), "rb"))).encode()
         pub = open(Path(tmp).joinpath("tessera.pub"), "rb").read()
 
-        for name, data in [(args.name + "-key", key), (args.name + "-pub", pub)]:
-            try:
-                s, v = create_secret(args, name, data, **labels)
-                print(f"secret: {s.name}, version: {v.name}")
-            except ge.AlreadyExists:
-                raise Error(f"secret {name} exists")
+        for name, data in [
+                (args.name + "key", key),
+                (args.name + "pub", pub)]:
+            s, v = create_secret(args, name, data, **labels)
+            print(f"secret: {s.name}, version: {v.name}")
 
 
 def run(args=None):

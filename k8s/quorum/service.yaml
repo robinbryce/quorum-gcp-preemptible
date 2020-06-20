@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: qnode
+  labels:
+    app: qnode
+spec:
+  clusterIP: None
+  # temporary, get pvc's going with nginx
+  ports:
+  - name: tcp-peer
+    port: 30303
+  - name: tcp-rpc
+    port: 8545
+  - name: tcp-wsock
+    port: 8546
+
+  selector:
+    app.kubernetes.io/name: qnode
+    app.kubernetes.io/part-of: qnode
