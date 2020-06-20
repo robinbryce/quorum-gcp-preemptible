@@ -92,10 +92,6 @@ def cmd_create_wallet(args):
     # delivery mechanism. We also store the wallet address on a label on both
     # the public key and the private.
 
-    # we put the address on the private as label values for convenience. we
-    # also store them as 'secrets' so the can trivially be made available to
-    # private key consumers without requiring them to go via the gcloud apis
-
     labels["address"] = "0x" + addr.hex()
 
     # lastly, locking and unlocking accounts requires the account to be
@@ -114,7 +110,7 @@ def cmd_create_wallet(args):
             s, v = create_secret(args, name, data, **labels)
             print(f"secret: {s.name}, version: {v.name}")
         except ge.AlreadyExists:
-            print(f"{args.name} exists")
+            raise Error(f"secret {args.name} exists")
 
 
 def cmd_create_nodekey(args):
@@ -122,19 +118,27 @@ def cmd_create_nodekey(args):
 
     labels = labels_from_args(args)
 
-    pwd = Path.cwd()
     key = sp.run(
-        f"docker run --rm -v {pwd}:{pwd} -w {pwd}"
-        f" -u {os.getuid()}:{os.getgid()}"
+        f"docker run --rm -u {os.getuid()}:{os.getgid()}"
         " --entrypoint=/usr/local/bin/bootnode"
         " quorumengineering/quorum:2.6.0 --genkey=/dev/stdout".split(),
         check=True, stdout=sp.PIPE, stderr=sp.PIPE).stdout
 
-    try:
-        s, v = create_secret(args.name, key, **labels)
-        print(f"secret: {s.name}, version: {v.name}")
-    except ge.AlreadyExists:
-        print(f"{args.name} exists")
+    enodeaddr = sp.run(
+        f"docker run --rm -i -u {os.getuid()}:{os.getgid()}"
+        " --entrypoint=/usr/local/bin/bootnode"
+        " quorumengineering/quorum:2.6.0 --nodekey=/dev/stdin --writeaddress".split(),
+        input=key, check=True, stdout=sp.PIPE, stderr=sp.PIPE).stdout.strip()
+    print(f"enodeaddr: {enodeaddr}")
+
+    for name, data in [
+            (args.name + "-key", key),
+            (args.name + "-enode", enodeaddr)]:
+        try:
+            s, v = create_secret(args, name, data, **labels)
+            print(f"secret: {s.name}, version: {v.name}")
+        except ge.AlreadyExists:
+            raise Error(f"secret {name} exists")
 
 
 def cmd_create_tesserakey(args):
@@ -159,7 +163,7 @@ def cmd_create_tesserakey(args):
                 s, v = create_secret(args, name, data, **labels)
                 print(f"secret: {s.name}, version: {v.name}")
             except ge.AlreadyExists:
-                print(f"{args.name} exists")
+                raise Error(f"secret {name} exists")
 
 
 def run(args=None):
@@ -172,26 +176,24 @@ def run(args=None):
     top.set_defaults(func=lambda a, b: print("See sub commands in help"))
 
     subcmd = top.add_subparsers(title="Availalbe commands")
-    p = subcmd.add_parser(
-        "wallet", help=cmd_create_wallet.__doc__)
+    p = subcmd.add_parser("wallet", help=cmd_create_wallet.__doc__)
     p.set_defaults(func=cmd_create_wallet)
     p.add_argument("name")
     p.add_argument("-l", "--labels", default=[], action="append", help="key:val,key2:val2 .. and repeated options are combined")
 
-    p = subcmd.add_parser(
-        "nodekey", help=cmd_create_nodekey.__doc__)
+    p = subcmd.add_parser("nodekey", help=cmd_create_nodekey.__doc__)
     p.set_defaults(func=cmd_create_nodekey)
     p.add_argument("name")
-    p.add_argument("-l", "--labels", action="append", help="key:val,key2:val2 .. and repeated options are combined")
+    p.add_argument("-l", "--labels", default=[], action="append", help="key:val,key2:val2 .. and repeated options are combined")
 
-    p = subcmd.add_parser(
-        "tesserakey", help=cmd_create_tesserakey.__doc__)
+    p = subcmd.add_parser("tesserakey", help=cmd_create_tesserakey.__doc__)
     p.set_defaults(func=cmd_create_tesserakey)
     p.add_argument("name")
     p.add_argument("-l", "--labels", default=[], action="append", help="key:val,key2:val2 .. and repeated options are combined")
 
     args = top.parse_args()
     args.func(args)
+
 
 if __name__ == "__main__":
     run_and_exit(run, Error)
