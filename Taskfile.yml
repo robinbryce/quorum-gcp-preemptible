@@ -30,12 +30,10 @@ tasks:
         done
     silent: true
   tf-rmstate-nodekeys:
-    desc: remove secret manager secrets DELETES THE KEYS
+    desc: remove secret manager secret resources DOES NOT delete keys
     dir: cluster
     cmds:
       - |
-        echo "This DELETES THE KEYS EDIT. Edit the task file to confirm"
-        exit 1
         for i in $(seq 0 {{.MAX_NODE_IDX}}); do
           for kind in key enode; do
           terraform state rm \

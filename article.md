@@ -127,13 +127,13 @@ test workload identity config:
     kubectl run -it \
       --generator=run-pod/v1 \
       --image google/cloud-sdk:slim \
-      --serviceaccount quorumpreempt-sa \
+      --serviceaccount quorum-node-sa \
       --namespace default workload-identity-test
     gcloud auth list
 
 It will show the kluster-serviceaccount as the active account:
 
-    kubectl run -it --generator=run-pod/v1 --image google/cloud-sdk:slim --serviceaccount quorumpreempt-sa --namespace default workload-identity-test
+    kubectl run -it --generator=run-pod/v1 --image google/cloud-sdk:slim --serviceaccount quorum-node-sa --namespace default workload-identity-test
     gcloud auth print-identity-token
 
 
@@ -257,11 +257,11 @@ init container with service principal auth to get token.
 use curl to get secret via api
 
     TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
-    curl "https://secretmanager.googleapis.com/v1/projects/project-id/secrets/secret-id/versions/version-id:access" \
+    curl "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/quorum-0-key/versions/1:access" \
         --request "GET" \
         --header "authorization: Bearer ${TOKEN}" \
         --header "content-type: application/json" \
-        --header "x-goog-user-project: project-id"
+        --header "x-goog-user-project: quorumpreempt"
 
 We store enode address alongside the key for convenience even though it is not
 secret - saves faffing with two different storage providers or having to

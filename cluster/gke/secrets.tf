@@ -1,4 +1,8 @@
 # Do these as a single map keyed resource so they can be indexed by secret id
+# NOTICE: These need to be imported via terraform import, eg:
+# terraform import \
+#   module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-$kind\"] \
+#   projects/quorumpreempt/secrets/qnode-$i-$kind
 resource "google_secret_manager_secret" "qnode" {
   project = var.project
   provider           = google-beta
