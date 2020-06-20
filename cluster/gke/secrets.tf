@@ -1,5 +1,6 @@
 # Do these as a single map keyed resource so they can be indexed by secret id
 resource "google_secret_manager_secret" "qnode" {
+  project = var.project
   provider           = google-beta
   for_each = toset([
     "qnode-0-key", "qnode-0-enode",
@@ -13,6 +14,7 @@ resource "google_secret_manager_secret" "qnode" {
 
 # google_secret_manager_secret.qnode["qnode-0-enode"]: Refreshing state... [id=projects/quorumpreempt/secrets/qnode-0-enode]
 resource "google_secret_manager_secret_iam_member" "qnode-key" {
+  project = var.project
   count = var.max_quorum_nodes
   provider           = google-beta
   secret_id = google_secret_manager_secret.qnode["qnode-${count.index}-key"].secret_id
@@ -21,7 +23,7 @@ resource "google_secret_manager_secret_iam_member" "qnode-key" {
 }
 
 resource "google_secret_manager_secret_iam_member" "qnode-enode" {
-  # TODO: use count instead
+  project = var.project
   count = var.max_quorum_nodes
   provider           = google-beta
   secret_id = google_secret_manager_secret.qnode["qnode-${count.index}-enode"].secret_id
