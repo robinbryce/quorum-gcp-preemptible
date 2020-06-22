@@ -36,6 +36,10 @@ Inspired by and extending [k8s for cheap on google cloud](https://dev.to/verkkok
 * blob (bucket) storage for tracking deployed contracts and their abi's
 * skaffold for build/deploy/test
 
+## Key modifications from referenced article
+* use workload identity for kubeib
+* use strategy 'replace' for traeffic - rolling update can't possible work with how the node taints are setup
+
 ## Zero Cost at Idle (close as possible)
 
 This may not be perfectly realizable. This is a list of things that affect it.
@@ -78,6 +82,8 @@ auth bootstrapping
 * kubectl deployment needs extra work (or can't handle) dependence on customer
   resource definitions or definition order dependencies
   [order of manifest respected since aug 2019](https://github.com/GoogleContainerTools/skaffold/pull/2729)
+* --force allows skaffold to replace resource
+* patch
 
 ## Network
 
@@ -257,11 +263,16 @@ init container with service principal auth to get token.
 use curl to get secret via api
 
     TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
-    curl "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/quorum-0-key/versions/1:access" \
+    curl "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/qnode-0-key/versions/1:access" \
         --request "GET" \
         --header "authorization: Bearer ${TOKEN}" \
-        --header "content-type: application/json" \
+        --header "content-type: application/json"
+
+Note: DO NOT add
+
         --header "x-goog-user-project: quorumpreempt"
+
+As this requires an oauth2 token with authenticated *user* identity
 
 We store enode address alongside the key for convenience even though it is not
 secret - saves faffing with two different storage providers or having to
@@ -390,14 +401,41 @@ this may not be as compelling any more.
 
 ## Quorum
 
+Store config in blobs and re-fetch each time. if config is deleted reset all the nodes but keep 'last ditch backups' on the pv.
+
+Fetch secrets to emptyDir every time and symlink into nodedir
+
+### Genesis
+
+Store in blob. Re-generate if blob missing. If blob missing ignore disk
+
+### Membership
+
+static-nodes.json store in blob
+
+get key from secret store fresh everytime. get static-nodes.json from blob
+every time. store in emptyDir. derive enode from key.
+If enode not in static-nodes (from blob) or blob missing re-initialise. move asside any prior node dir
+
+Do not attempt to automatically raft.removePeer.
+
+### google cloud bucket object generation and metageneration
+
+Instead of leasing, googles model is to get the metadata of the object before
+the update/write. Then on write, set a precondition match requirement. The
+generation changes every time the object changes. The meta-generaiton changes
+everytime the object meta data changes. The meta-generation is *reset* when
+the object changes and is only meaningfull in combination with a generation
+pre-condition
+
 TODO:
 
-* standup vanila pod with pvc
-* deliver nodekey to pod using workload identity
-* deliver wallet key to pod using (ideally different) workload identity
-* store pods configuration in blob object named after its public key
-* do gensis
-* do member add
+* [x] standup vanila pod with pvc
+* [x] deliver nodekey to pod using workload identity
+* [x] deliver wallet key to pod using workload identity
+* [x] do gensis
+* [-] store pods configuration in blob object named after its public key
+* [-] do member add
 
 ## Article Resources
 

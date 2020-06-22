@@ -130,3 +130,13 @@ resource "google_storage_bucket" "cluster" {
   location = var.region
   storage_class = "STANDARD"
 }
+
+resource "google_storage_bucket" "membership" {
+  provider = google-beta
+  name = "${var.project}-membership.${var.gcp_buckets_tld}"
+  project = var.project
+  # location is the 'region' here!
+  location = var.region
+  storage_class = "STANDARD"
+  default_event_based_hold = true
+}

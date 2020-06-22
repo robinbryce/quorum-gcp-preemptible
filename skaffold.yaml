@@ -6,6 +6,21 @@ build:
   artifacts:
   - image: eu.gcr.io/quorumpreempt/nginx-web
     context: nginx-alpine
+  - image: eu.gcr.io/quorumpreempt/qnode-init
+    context: qnode
+    sync:
+      infer:
+    docker:
+      dockerfile:
+        Dockerfile-init
+  - image: eu.gcr.io/quorumpreempt/qnode
+    context: qnode
+    sync:
+      infer:
+    docker:
+      dockerfile:
+        Dockerfile
+
 deploy:
   kubectl:
     manifests:
@@ -23,3 +38,12 @@ deploy:
     - k8s/traefik/route.yaml
     - k8s/quorum/statefulset.yaml
     - k8s/quorum/service.yaml
+
+profiles:
+  - name: qnode
+    deploy:
+      kubectl:
+        manifests:
+        - k8s/quorum/statefulset.yaml
+        - k8s/quorum/service.yaml
+

@@ -13,12 +13,17 @@ spec:
     metadata:
       labels:
         app: qnode # Pod template's label selector
+        skaffold.dev/run-id: static
+        app.kubernetes.io/managed-by: skaffold
     spec:
       serviceAccountName: quorum-node-sa
       terminationGracePeriodSeconds: 10
+      initContainers:
+        - name: qnodeinit
+          image: eu.gcr.io/quorumpreempt/qnode-init
       containers:
       - name: qnode
-        image: k8s.gcr.io/nginx-slim:0.8
+        image: eu.gcr.io/quorumpreempt/qnode
         ports:
         - containerPort: 30303
           name: tcp-peer
