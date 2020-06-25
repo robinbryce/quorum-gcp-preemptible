@@ -71,7 +71,7 @@ def create_secret(args, name, data, **labels):
             replication=dict(automatic={}), labels=labels))
     except ge.AlreadyExists:
         resourcename = f"projects/{project}/secrets/{name}"
-        print(f"secret {args.name} exists, get: {resourcename}")
+        print(f"secret {name} exists, get: {resourcename}")
         s = c.get_secret(resourcename)
     v = c.add_secret_version(s.name, dict(data=data))
     return s, v

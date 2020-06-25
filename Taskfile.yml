@@ -16,26 +16,26 @@ tasks:
         done
     silent: true
 
-  tf-import-nodekeys:
+  tf-import-secrets:
     desc: import secret manager secrets (not values) into terraform
     dir: cluster
     cmds:
       - |
         for i in $(seq 0 {{.MAX_NODE_IDX}}); do
-          for kind in key enode; do
+          for kind in key enode wallet-address wallet-key wallet-password; do
             terraform import \
               module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-$kind\"] \
               projects/quorumpreempt/secrets/qnode-$i-$kind
           done
         done
     silent: true
-  tf-rmstate-nodekeys:
+  tf-rmstate-secrets:
     desc: remove secret manager secret resources DOES NOT delete keys
     dir: cluster
     cmds:
       - |
         for i in $(seq 0 {{.MAX_NODE_IDX}}); do
-          for kind in key enode; do
+          for kind in key enode wallet-address wallet-key wallet-password; do
           terraform state rm \
             module.cluster.google_secret_manager_secret.qnode[\"qnode-$i-$kind\"]
           done

@@ -405,6 +405,9 @@ Store config in blobs and re-fetch each time. if config is deleted reset all the
 
 Fetch secrets to emptyDir every time and symlink into nodedir
 
+side note on running python in quorum's alpine image. Set PYTHONUNBUFFERED=1
+else output is missing or delayed
+
 ### Genesis
 
 Store in blob. Re-generate if blob missing. If blob missing ignore disk
@@ -419,6 +422,36 @@ If enode not in static-nodes (from blob) or blob missing re-initialise. move ass
 
 Do not attempt to automatically raft.removePeer.
 
+Lets remind ourselves what we can count on from raft.addPeer and also what is
+required of us: http://docs.goquorum.com/en/latest/Consensus/raft/raft-rpc-api/
+
+1. raft.addPeer takes an enode address - public address of the nodes key.
+2. It errors with an idenfifiable message if the enode is already a member
+
+   > node with this enode has already been added to the cluster
+
+3. If successful it returns the RAFT_ID
+4. raft.cluster returns a json document listing all current members and their
+   raft ids
+6. The initial nodes in the network must be in static-nodes.json and must be
+   listed in the same order on each node.
+7. There need only be *one* nodes in static-nodes.json
+8. Other nodes can be added and removed later without updating
+   static-nodes.json if dynamic peer discovery is enabled.
+9. To support joining older chains without compromising consensus, nodes should
+   join as learner nodes and be promoted once they have synced.
+
+MVP: For now we chose to fully configure the network in static-nodes.json and
+distribute the file via a google cloud bucket object.
+
+BETTER:
+* one replica set for 'bootnodes' with principal which permits writting
+  genesis and static-nodes.json
+* one (or more) replica set(s) for participant nodes with a different principal
+* All qnode's attempt to update static-nodes.json. Non boot nodes treat 403 as
+  "I know you but you are not allowed to do that" and continue. All nodes use
+  raft.cluster to check if they are a member and if not will call raft.addPeer
+
 ### google cloud bucket object generation and metageneration
 
 Instead of leasing, googles model is to get the metadata of the object before
@@ -428,14 +461,57 @@ everytime the object meta data changes. The meta-generation is *reset* when
 the object changes and is only meaningfull in combination with a generation
 pre-condition
 
+This works very well for read/modify/write where there are no side effects
+*other* than the changed bucket content. However, when there are other
+side-effects - for example raft registraion - we need some kind of distributed
+co-ordination.
+
+Using a bucket which enables the default event-based hold on object creation
+gives us "lock on create" semantics.
+
+Can we update and unlock in a single move ? If so we have  a great mechanism
+for handling chain membership blob creation and updates.
+
+Ok, possibly not. Can we fix this with 'co-operative rules'
+
+removing a hold is allowed in only 2 scenarios:
+
+* Service just created object
+* Service placed hold on object in its current 'session'
+
+If we crash
+* Service has 'tombstone' enabling it to un hold after crashing with hold
+
+But how to store the 'tombstones' without recursive problem
+
+How about combining event-based with temporary, event-based to solve the
+creation-lock problem and time-based to get lease like behaviour ?
+
+No, event-based and temporary holds work the same when no retention policy is
+set.
+
+ok,
+
+* pre join - get/create held blob with member details 'sans' raft id. this can only
+  succeede once. try getting first.
+* join - create 'held' blob for member, content addressed by key, with raft id in
+  `join' is not allowed to release the hold.
+
+
+https://cloud.google.com/storage/docs/object-holds
+
 TODO:
 
 * [x] standup vanila pod with pvc
 * [x] deliver nodekey to pod using workload identity
 * [x] deliver wallet key to pod using workload identity
-* [x] do gensis
-* [-] store pods configuration in blob object named after its public key
-* [-] do member add
+* [ ] do gensis
+* [ ] do member add
+* [ ] ? store pods configuration in blob object named after its public key
+* [ ] in cloud builds
+* [ ] rename qnodeinit.py to raftnode.py or qraft.py or something 'rafty'
+* [ ] probably rename qnode -> quorum. despite the common typo's it is what
+      everyone would expect
 
 ## Article Resources
 
