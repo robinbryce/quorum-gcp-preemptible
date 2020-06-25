@@ -505,6 +505,8 @@ TODO:
 * [x] standup vanila pod with pvc
 * [x] deliver nodekey to pod using workload identity
 * [x] deliver wallet key to pod using workload identity
+* [ ] consider curl + jq for quorum main image so we can put nodekey in
+      emptyDir
 * [ ] do gensis
 * [ ] do member add
 * [ ] ? store pods configuration in blob object named after its public key

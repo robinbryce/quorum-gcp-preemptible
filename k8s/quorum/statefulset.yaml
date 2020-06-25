@@ -18,12 +18,97 @@ spec:
     spec:
       serviceAccountName: quorum-node-sa
       terminationGracePeriodSeconds: 10
+      volumes:
+        - name: qnode-genesisconfig
+          configMap:
+            name: qnode-genesisconfig
+        - name: qnode-nodeconfig
+          configMap:
+            name: qnode-nodeconfig
+
       initContainers:
-        - name: qnodeinit
-          image: eu.gcr.io/quorumpreempt/qnode-init
+      - name: qnodeinit
+        image: eu.gcr.io/quorumpreempt/qnode-init
+        volumeMounts:
+          - name: quorum-pv
+            mountPath: /var/lib/quorum
+          - name: qnode-genesisconfig
+            mountPath: /service/genesisconf.json
+            subPath: genesisconf.json
+          - name: qnode-nodeconfig
+            mountPath: /service/nodeconf.json
+            subPath: nodeconf.json
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        command:
+          - sh
+        args:
+          - -cx
+          - |
+            set -e
+            python3 qnodeinit.py \
+              --nodedir=/var/lib/quorum/node \
+             genesis
+            python3 qnodeinit.py \
+              --nodedir=/var/lib/quorum/node \
+              --nodenum=${POD_NAME#*-} \
+              nodeinit
+
       containers:
       - name: qnode
-        image: eu.gcr.io/quorumpreempt/qnode
+        image: quorumengineering/quorum:2.6.0
+        volumeMounts:
+          - rame: quorum-pv
+            mountPath: /var/lib/quorum
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+
+        command:
+          - sh
+        args:
+          - -cx
+          - |
+            set -e
+            GENESIS_FILE="${NODEDIR}/genesis.json"
+            CHAIN_ID=99
+
+            NODEDIR=/var/lib/quorum/node
+            REPLICA_NUMBER=${POD_NAME#*-}
+            RAFT_ID=1
+            if [ -f ${NODEDIR}/RAFT_ID ]; then
+              RAFT_ID=$(cat ${NODEDIR}/RAFT_ID)
+            fi
+            export PRIVATE_CONFIG=ignore
+
+            RAFT_ARGS="--raft"
+            if [ "$RAFT_ID" != "1" ]; then
+              RAFT_ARGS="$RAFT_ARGS  --raftjoinexisting ${RAFT_ID}"
+            fi
+            geth \
+              --identity $POD_NAME \
+              --datadir $NODEDIR \
+              --gcmode archive \
+              --syncmode full \
+              --nodiscover \
+              --verbosity 3 \
+              --networkid 99 \
+              --miner.gastarget 3000000000 \
+              --rpc \
+              --rpccorsdomain '*' \
+              --rpcvhosts '*' \
+              --rpcaddr 0.0.0.0 \
+              --ws \
+              --wsorigins '*' \
+              --wsaddr 0.0.0.0 \
+              --rpcapi admin,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,raft \
+              $RAFT_ARGS
+
         ports:
         - containerPort: 30303
           name: tcp-peer
@@ -31,6 +116,8 @@ spec:
           name: tcp-rpc
         - containerPort: 8546
           name: tcp-wsock
+        - containerPort: 50400
+          name: tcp-raft
         volumeMounts:
         - name: quorum-pv
           mountPath: /var/lib/quorum

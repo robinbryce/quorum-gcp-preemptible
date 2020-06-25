@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: qnode
+  name: qnode-genesisconfig
+  namespace: default
+data:
+  genesisconf.json: |-
+    {
+      "allocwallets": [
+        {"name":"qnode-0-wallet", "balance":"1000000000000000000000000000"}
+      ],
+      "genesis" : {
+          "coinbase":"0x0000000000000000000000000000000000000000",
+          "config": {
+            "chainId":99,
+            "homesteadBlock":0,
+            "byzantiumBlock":0,
+            "constantinopleBlock":0,
+            "eip150Block":0,
+            "eip155Block":0,
+            "eip150Hash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+            "eip158Block":0,
+            "isQuorum":true,
+            "txnSizeLimit":128,
+            "maxCodeSizeConfig": [{"block": 0, "size":96}]
+          },
+          "difficulty":"0x0",
+          "extraData":"0x0000000000000000000000000000000000000000000000000000000000000000",
+          "gasLimit":"0xE0000000",
+          "mixhash":"0x00000000000000000000000000000000000000647572616c65787365646c6578",
+          "nonce":"0x0",
+          "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+          "timestamp":"0x0"
+      }
+    }

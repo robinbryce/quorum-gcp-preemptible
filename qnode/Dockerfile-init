@@ -1,0 +1,24 @@
+ARG BASE_TAG=2.6.0
+
+FROM quorumengineering/quorum:${BASE_TAG}
+ARG REQUIREMENTS_TXT=requirements.txt
+
+# Set the location for pip3 install --user
+ENV PYTHONUSERBASE="/service"
+WORKDIR $PYTHONUSERBASE
+COPY ${REQUIREMENTS_TXT} .
+
+ENV PATH="/service/bin:$PATH"
+
+RUN \
+  apk add --no-cache \
+    python3 && \
+  pip3 install --user -r ${REQUIREMENTS_TXT}
+
+COPY commoncli.py /service/
+COPY qnodeinit.py /service/
+COPY test.py /service/
+ENTRYPOINT ["/usr/bin/python3"]
+ENV PYTHONPATH="/service"
+ENV PYTHONUNBUFFERED=1
+CMD ["qnodeinit.py", "--nodedir", "/var/lib/quorum/node", "--forever"]

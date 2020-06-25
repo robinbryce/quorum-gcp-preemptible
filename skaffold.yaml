@@ -36,6 +36,8 @@ deploy:
     - k8s/traefik/deployment.yaml
     - k8s/traefik/resource.yaml
     - k8s/traefik/route.yaml
+    - k8s/quorum/genesisconf.yaml
+    - k8s/quorum/nodeconf.yaml
     - k8s/quorum/statefulset.yaml
     - k8s/quorum/service.yaml
 
@@ -44,6 +46,8 @@ profiles:
     deploy:
       kubectl:
         manifests:
+        - k8s/quorum/genesisconf.yaml
+        - k8s/quorum/nodeconf.yaml
         - k8s/quorum/statefulset.yaml
         - k8s/quorum/service.yaml
 
