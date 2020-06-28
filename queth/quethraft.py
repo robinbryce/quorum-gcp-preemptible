@@ -3,6 +3,7 @@
 
 
 from contextlib import contextmanager
+from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 import argparse
@@ -139,38 +140,29 @@ def derive_node_pubkey(bootnode, key):
         stdout=sp.PIPE, stderr=sp.PIPE).stdout.strip().decode().strip()
 
 
-class NodeConf:
-    """Convenience wrapper for the node configuration file"""
+def load_config(args):
 
-    def __init__(self, args):
-        conf = Path(args.nodeconf).absolute()
-        self._confdir = conf.parent
-        self._node = json.load(open(conf))["node"]
-        self._nodenum = getattr(args, "nodenum", 0)
+    filename = Path(args.nodeconf).absolute()
+    confdir = filename.parent
 
-        if args.address is not None:
-            self._node["address"] = args.address
+    # Convenience of . to access values
+    conf = json.load(open(filename), object_hook=lambda d: type("Config", (), d))
 
-        if args.bind is not None:
-            self._node["bind"] = args.bind
+    if args.address is not None:
+        conf.address = args.address
 
-        if args.nodekey is not None:
-            self._node["key"] = args.nodekey
-        if args.nodedir is not None:
-            self._node["dir"] = args.nodedir
+    if args.bind is not None:
+        conf.bind = args.bind
 
-        self.nodedir = Path(self._confdir.joinpath(self._node["dir"]))
-        self.nodekey = Path(self._confdir.joinpath(self._node["key"]))
+    if args.nodekey is not None:
+        conf.key = args.nodekey
 
-    @property
-    def key_secretname(self):
-        return self._node["secretnames"].format(number=self._nodenum, kind="key")
+    if args.nodedir is not None:
+        conf.dir = args.nodedir
 
-    def get_member_blobname(self, enode):
-        return self._node["node_blob"].format(enode=enode)
-
-    def __getattr__(self, name):
-        return self._node[name]
+    conf.dir = Path(confdir.joinpath(conf.dir))
+    conf.key = Path(confdir.joinpath(conf.key))
+    return conf
 
 
 def cmd_nodeinit(args):
@@ -185,18 +177,21 @@ def cmd_nodeinit(args):
 
     """
 
-    conf = NodeConf(args)
+    if args.nodekey_secretname is None:
+        raise Error("--nodekey-secretname is required")
+
+    conf = load_config(args)
 
     token = args.token or get_workload_token()
     genesis = get_blob(token, conf.bucket, conf.genesis_blob, isjson=True)
 
     # We symlink the nodekey from an emptyDir, that way it never lies around on
     # disc un-necessarily.
-    if (conf.nodekey.resolve() == conf.nodedir.joinpath("nodekey")):
+    if (conf.key.resolve() == conf.dir.joinpath("nodekey")):
         raise Error(
             "The nodekey must be stored outside of the nodedir (symlinked from emptyDir)")
 
-    key = get_secret(token, "quorumpreempt", conf.key_secretname, "latest")
+    key = get_secret(token, "quorumpreempt", args.nodekey_secretname, "latest")
     enode = derive_node_pubkey(args.bootnode, key)
 
     resp, generation = get_object(
@@ -210,11 +205,11 @@ def cmd_nodeinit(args):
 
         # Then, regardles of what is on the pv, we are starting from scratch.
         # As this is a little 'bold', archive anything that is hanging around.
-        if conf.nodedir.exists():
-            backupdir = str(conf.nodedir) + \
+        if conf.dir.exists():
+            backupdir = str(conf.dir) + \
                 "-" + datetime.utcnow().strftime("%Y-%m-%d.%H-%M-%S-%f")
             print(f"Saving stale network datadir at {backupdir}")
-            conf.nodedir.rename(backupdir)
+            conf.dir.rename(backupdir)
 
         # There is no network, we are the first. use generation=0 pre-condition
         # to break the creation race. RAFT_ID is 1.
@@ -224,47 +219,47 @@ def cmd_nodeinit(args):
         print("Ensuring configuration of existing network")
         static_nodes = json_response(resp)
 
-    if not conf.nodedir.exists():
+    if not conf.dir.exists():
         # Automatic node recovery
         gethinit = True
-        conf.nodedir.mkdir(parents=True)
+        conf.dir.mkdir(parents=True)
 
     # Un-conditionaly write the secrets and blobs to disc. They are the source
     # of truth for the network.
 
     # emptyDir plus similar arrangements for the main quorum pod can limit the
     # chances of this key being exposed on disc.
-    with open(conf.nodekey, "wb") as f:
+    with open(conf.key, "wb") as f:
         f.write(key)
 
-    with open(conf.nodedir.joinpath("enode"), "w") as f:
+    with open(conf.dir.joinpath("enode"), "w") as f:
         f.write(enode)
 
     # create the symlink, in case someone has been fiddling with the local
     # directory, unlink the target first
     try:
-        conf.nodedir.joinpath("nodekey").unlink()
+        conf.dir.joinpath("nodekey").unlink()
     except FileNotFoundError:
         pass
 
-    os.symlink(conf.nodekey, conf.nodedir.joinpath("nodekey"))
+    os.symlink(conf.key, conf.dir.joinpath("nodekey"))
 
-    with open(conf.nodedir.joinpath("genesis.json"), "w") as f:
+    with open(conf.dir.joinpath("genesis.json"), "w") as f:
         json.dump(genesis, f, indent=2, sort_keys=True)
 
     # Is this a new network or are we recovering after losing/deleting a pv ?
     if gethinit:
         sp.check_call(
-            f"{args.geth} --datadir={conf.nodedir} init {conf.nodedir}/genesis.json".split())
+            f"{args.geth} --datadir={conf.dir} init {conf.dir}/genesis.json".split())
 
     # As far as possible we un-conditionaly write the local disc state
     # according to what we find in the blob. But RAFT_ID and static-nodes.json
     # are dependent on registration state. And in the face of (development
     # driven) ad-hoc node creation & destruction this takes a few extra steps.
     def write_local_nodeconf(static_nodes, raftid):
-        with open(conf.nodedir.joinpath("static-nodes.json"), "w") as f:
+        with open(conf.dir.joinpath("static-nodes.json"), "w") as f:
             json.dump(static_nodes, f, indent=2, sort_keys=True)
-        with open(conf.nodedir.joinpath("RAFT_ID"), "w") as f:
+        with open(conf.dir.joinpath("RAFT_ID"), "w") as f:
             f.write(str(raftid))
 
     enode_url = (
@@ -336,7 +331,7 @@ def cmd_nodeinit(args):
                 # this out more safely than anything we could do here
                 raise Error("static-nodes.json not consistent with raft.cluster")
 
-            print(f"Wrote {conf.nodedir}/RAFT_ID: {m['raftId']}")
+            print(f"Wrote {conf.dir}/RAFT_ID: {m['raftId']}")
             write_local_nodeconf(static_nodes, m["raftId"])
             return
 
@@ -364,7 +359,7 @@ def cmd_nodeinit(args):
 def cmd_genesis(args):
     """ensure chain genesis"""
 
-    conf = NodeConf(args)
+    conf = load_config(args)
     genesisconf = json.load(open(Path(args.genesisconf).absolute()))
 
     genesis = genesisconf["genesis"]
@@ -406,7 +401,7 @@ def arg_parser(args=None):
         description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    top.set_defaults(func=lambda a, b: print("see sub commands in help"))
+    top.set_defaults(func=lambda a: print("see sub commands in help"))
     top.add_argument(
         "--token", help="provide bearer token for gcp api access")
     top.add_argument(
@@ -415,7 +410,7 @@ def arg_parser(args=None):
         "--geth", default="geth", help="for use on host, refer to docker run sh wrapper")
     top.add_argument("--nodedir", help="override nodeconf dir for geth node data")
     top.add_argument("--nodekey", help="override nodeconf key location - must be outside of nodedir")
-    top.add_argument("--nodenum", default=0)
+    top.add_argument("--nodekey-secretname", help="gcp secret manager secret name hodling the nodekey")
     top.add_argument("--address", default="127.0.0.1")
     top.add_argument("--bind", default=None)
     top.add_argument("--nodeconf", default="nodeconf.json", help="node configuration")

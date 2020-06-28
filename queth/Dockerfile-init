@@ -16,8 +16,8 @@ RUN \
   pip3 install --user -r ${REQUIREMENTS_TXT}
 
 COPY commoncli.py /service/
-COPY qnodeinit.py /service/
+COPY quethraft.py /service/
 ENTRYPOINT ["/usr/bin/python3"]
 ENV PYTHONPATH="/service"
 ENV PYTHONUNBUFFERED=1
-CMD ["qnodeinit.py", "--nodedir", "/var/lib/quorum/node"]
+CMD ["quethraft.py", "--nodedir", "/var/lib/quorum/node"]
