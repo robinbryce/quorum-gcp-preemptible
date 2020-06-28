@@ -12,7 +12,7 @@ spec:
       # Label selector that determines which Pods belong to the StatefulSet
       # Must match spec: template: metadata: labels
   serviceName: qnode
-  replicas: 2  # default nodes per deployments (1 is fine), sans istio kubectl scale adds nodes
+  replicas: 3  # default nodes per deployments (1 is fine)
   template:
     metadata:
       labels:

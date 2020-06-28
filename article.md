@@ -460,6 +460,26 @@ BETTER:
   "I know you but you are not allowed to do that" and continue. All nodes use
   raft.cluster to check if they are a member and if not will call raft.addPeer
 
+### Accounts
+
+We do not import accounts, except for development cli convenience use. When
+using the go-ethereum generated code bindings all transactions are
+eth_sendRawTransaction and so are pre signed by the client. The clients keys
+are delivered from google secrets manager to the specific workload. Access is
+controled by iam permissions.
+
+For development, it is convenient to be able to import and unlock the genesis
+accounts. This lets us use node signing and eth_sendTransaction for
+experimentation.
+
+
+### Resilience in the face of pre-empting
+
+Our VM instances *will* get killed at least once per 24hours. Can we use
+https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+
+To spread our geth nodes around ?
+
 ### google cloud bucket object generation and metageneration
 
 Instead of leasing, googles model is to get the metadata of the object before
@@ -555,9 +575,13 @@ TODO:
 * [x] deliver nodekey to pod using workload identity
 * [x] deliver wallet key to pod using workload identity
 * [x] do gensis
-* [ ] sort out node routing ip/dns.
-* [ ] do member add
-* [ ] qnodeinit.py init command which does both genesis and nodeinit
+* [x] sort out node routing ip/dns.
+* [x] do member add
+* [x] qnodeinit.py init command which does both genesis and nodeinit
+* [ ] account convenience script for unlocking and using our genesis funded
+      accounts.
+* [ ] skaffold profile patch to set replica count
+* [ ] Headless + deployment alternate as per https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 * [ ] consider curl + jq for quorum main image so we can put nodekey in
       emptyDir
 * [ ] ? store pods configuration in blob object named after its public key

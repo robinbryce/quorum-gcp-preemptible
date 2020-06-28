@@ -287,9 +287,10 @@ def cmd_nodeinit(args):
 
     peers = {}
     iregistered = None
-    for iregistered, peer in enumerate(static_nodes):
+    for i, peer in enumerate(static_nodes):
 
         if peer.startswith(f"enode://{enode}"):
+            iregistered = i
             continue  # registered, only need to ensure local disc contents
 
         o = urlparse(peer)
@@ -301,8 +302,12 @@ def cmd_nodeinit(args):
         # intent.
         peers[peer_enode] = dict(enode=peer_enode, host=peer_addr.split(":", 1)[0])
 
-    if not peers:
-        # this node is the only entry in static nodes and registration all good.
+    if iregistered == 0:
+        # this node is the first entry in static nodes and registration all
+        # good.  if we are starting up *in order* as part of a stateful set,
+        # the subsequent peers will not have started yet. the first member of
+        # static nodes never registers with anyone - it established the
+        # network.
         write_local_nodeconf(static_nodes, 1)
         return
 
@@ -331,7 +336,7 @@ def cmd_nodeinit(args):
                 # this out more safely than anything we could do here
                 raise Error("static-nodes.json not consistent with raft.cluster")
 
-            print(f"Restoring {conf.nodedir}/RAFT_ID: {m['raftId']}")
+            print(f"Wrote {conf.nodedir}/RAFT_ID: {m['raftId']}")
             write_local_nodeconf(static_nodes, m["raftId"])
             return
 
