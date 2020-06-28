@@ -6,15 +6,15 @@ build:
   artifacts:
   - image: eu.gcr.io/quorumpreempt/nginx-web
     context: nginx-alpine
-  - image: eu.gcr.io/quorumpreempt/qnode-init
-    context: qnode
+  - image: eu.gcr.io/quorumpreempt/quethraft-init
+    context: queth
     sync:
       infer:
     docker:
       dockerfile:
         Dockerfile-init
-  - image: eu.gcr.io/quorumpreempt/qnode
-    context: qnode
+  - image: eu.gcr.io/quorumpreempt/queth
+    context: queth
     sync:
       infer:
     docker:
@@ -36,24 +36,23 @@ deploy:
     - k8s/traefik/deployment.yaml
     - k8s/traefik/resource.yaml
     - k8s/traefik/route.yaml
-    - k8s/quorum/genesisconf.yaml
-    - k8s/quorum/nodeconf.yaml
-    - k8s/quorum/statefulset.yaml
-    - k8s/quorum/service.yaml
+    - k8s/queth/genesisconf.yaml
+    - k8s/queth/nodeconf.yaml
+    - k8s/queth/statefulset.yaml
+    - k8s/queth/service.yaml
 
 profiles:
-  - name: dev
+  - name: dnsutils
     deploy:
       kubectl:
         manifests:
         - k8s/dnsutils/dnsutils.yaml
 
-  - name: qnode
+  - name: queth
     deploy:
       kubectl:
         manifests:
-        - k8s/quorum/genesisconf.yaml
-        - k8s/quorum/nodeconf.yaml
-        - k8s/quorum/statefulset.yaml
-        - k8s/quorum/service.yaml
-
+        - k8s/queth/genesisconf.yaml
+        - k8s/queth/nodeconf.yaml
+        - k8s/queth/statefulset.yaml
+        - k8s/queth/service.yaml

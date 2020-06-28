@@ -2,17 +2,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: qnode
-  name: qnode-nodeconfig
+    app: queth
+  name: queth-nodeconfig
   namespace: default
 data:
   nodeconf.json: |-
     {
-      "node": {
-        "secretnames": "qnode-{number}-{kind}",
-        "genesis_blob":"quorumpreempt/chain1/qnode-genesis.json",
+        "chain_blob_path": "quorumpreempt/chain1",
+        "genesis_blob":"quorumpreempt/chain1/queth-genesis.json",
         "static_nodes_blob": "quorumpreempt/chain1/static-nodes.json",
-        "member_blob": "quorumpreempt/chain1/member-{enode}.json",
         "key": "/var/lib/quorum/nodekey",
         "dir": "/var/lib/quorum/node",
         "bucket": "quorumpreempt-cluster.g.buckets.thaumagen.com",
@@ -22,5 +20,4 @@ data:
         "rpcport": 8545,
         "wsport": 8546,
         "raftport": 50400
-      }
     }

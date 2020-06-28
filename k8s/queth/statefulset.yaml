@@ -2,21 +2,21 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: qnode
+  name: queth
   labels:
-    app: qnode
+    app: queth
 spec:
   selector:
     matchLabels:
-      app: qnode
+      app: queth
       # Label selector that determines which Pods belong to the StatefulSet
       # Must match spec: template: metadata: labels
-  serviceName: qnode
+  serviceName: queth
   replicas: 3  # default nodes per deployments (1 is fine)
   template:
     metadata:
       labels:
-        app: qnode
+        app: queth
         # Pod template's label selector
         #skaffold.dev/run-id: static
         #app.kubernetes.io/managed-by: skaffold
@@ -24,23 +24,23 @@ spec:
       serviceAccountName: quorum-node-sa
       terminationGracePeriodSeconds: 10
       volumes:
-        - name: qnode-genesisconfig
+        - name: queth-genesisconfig
           configMap:
-            name: qnode-genesisconfig
-        - name: qnode-nodeconfig
+            name: queth-genesisconfig
+        - name: queth-nodeconfig
           configMap:
-            name: qnode-nodeconfig
+            name: queth-nodeconfig
 
       initContainers:
-      - name: qnodeinit
-        image: eu.gcr.io/quorumpreempt/qnode-init
+      - name: quethinit
+        image: eu.gcr.io/quorumpreempt/quethraft-init
         volumeMounts:
           - name: quorum-pv
             mountPath: /var/lib/quorum
-          - name: qnode-genesisconfig
+          - name: queth-genesisconfig
             mountPath: /service/genesisconf.json
             subPath: genesisconf.json
-          - name: qnode-nodeconfig
+          - name: queth-nodeconfig
             mountPath: /service/nodeconf.json
             subPath: nodeconf.json
         env:
@@ -54,14 +54,14 @@ spec:
           - -cx
           - |
             set -e
-            find /var/lib/quorum
-            python3 qnodeinit.py \
+            python3 quethraft.py \
               --nodedir=/var/lib/quorum/node \
-              --address=${POD_NAME}.qnode.default.svc.cluster.local \
-              --nodenum=${POD_NAME#*-} init
+              --address=${POD_NAME}.queth.default.svc.cluster.local \
+              --nodekey-secretname=qnode-${POD_NAME#*-}-key \
+              init
 
       containers:
-      - name: qnode
+      - name: queth
         image: quorumengineering/quorum:2.6.0
         volumeMounts:
           - rame: quorum-pv

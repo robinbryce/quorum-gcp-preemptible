@@ -1,0 +1,7 @@
+__pycache__
+.DS_Store
+.terraformignore
+.terraform
+dotterraformrc
+credentials
+project-key.json

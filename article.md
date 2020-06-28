@@ -586,9 +586,8 @@ TODO:
       emptyDir
 * [ ] ? store pods configuration in blob object named after its public key
 * [ ] in cloud builds
-* [ ] rename qnodeinit.py to raftnode.py or qraft.py or something 'rafty'
-* [ ] probably rename qnode -> quorum. despite the common typo's it is what
-      everyone would expect
+* [x] rename qnodeinit.py to raftnode.py or qraft.py or something 'rafty'
+* [x] probably rename qnode -> quorum. called it queth.
 
 ## Article Resources
 
