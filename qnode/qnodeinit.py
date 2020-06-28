@@ -9,21 +9,37 @@ import argparse
 import base64
 import json
 import os
+import random
 import requests
 import subprocess as sp
 import sys
+from urllib.parse import urlparse, parse_qs
 
 import commoncli
+
+
+GENERAL_CONNECTION_EXEPTIONS = (
+    requests.exceptions.Timeout,
+    requests.exceptions.ConnectionError,
+    ConnectionAbortedError,
+    ConnectionRefusedError,
+    ConnectionResetError)
+
 
 class Error(Exception):
     """General, detected error condition"""
 
 
 def json_response(resp):
-    if resp:
-        return resp.json()
+
+    if not resp:
+        raise Error(f"error: status {resp.status_code}")
+
     j = resp.json()
-    if "error" in j and "message" in j["error"]:
+    if "error" not in j:
+        return j
+
+    if "message" in j["error"]:
         raise Error(j["error"]["message"])
     raise Error(f"error: status {resp.status_code}")
 
@@ -132,6 +148,12 @@ class NodeConf:
         self._node = json.load(open(conf))["node"]
         self._nodenum = getattr(args, "nodenum", 0)
 
+        if args.address is not None:
+            self._node["address"] = args.address
+
+        if args.bind is not None:
+            self._node["bind"] = args.bind
+
         if args.nodekey is not None:
             self._node["key"] = args.nodekey
         if args.nodedir is not None:
@@ -152,7 +174,16 @@ class NodeConf:
 
 
 def cmd_nodeinit(args):
-    """ensure geth node configuration"""
+    """ensure geth node configuration
+
+
+    first node
+
+    disk reset
+
+    join
+
+    """
 
     conf = NodeConf(args)
 
@@ -184,20 +215,19 @@ def cmd_nodeinit(args):
                 "-" + datetime.utcnow().strftime("%Y-%m-%d.%H-%M-%S-%f")
             print(f"Saving stale network datadir at {backupdir}")
             conf.nodedir.rename(backupdir)
-        conf.nodedir.mkdir(parents=True)
 
         # There is no network, we are the first. use generation=0 pre-condition
         # to break the creation race. RAFT_ID is 1.
-        static_nodes = [
-            f"enode://{enode}@{conf.ipaddress}:{conf.port}"
-            f"?discport=0&raftport={conf.raftport}"]
+        static_nodes = []
         gethinit = True
     else:
-        if not conf.nodedir.exists():
-            # Automatic node recovery
-            gethinit = True
         print("Ensuring configuration of existing network")
         static_nodes = json_response(resp)
+
+    if not conf.nodedir.exists():
+        # Automatic node recovery
+        gethinit = True
+        conf.nodedir.mkdir(parents=True)
 
     # Un-conditionaly write the secrets and blobs to disc. They are the source
     # of truth for the network.
@@ -222,36 +252,108 @@ def cmd_nodeinit(args):
     with open(conf.nodedir.joinpath("genesis.json"), "w") as f:
         json.dump(genesis, f, indent=2, sort_keys=True)
 
-    with open(conf.nodedir.joinpath("static-nodes.json"), "w") as f:
-        json.dump(static_nodes, f, indent=2, sort_keys=True)
-
     # Is this a new network or are we recovering after losing/deleting a pv ?
     if gethinit:
         sp.check_call(
             f"{args.geth} --datadir={conf.nodedir} init {conf.nodedir}/genesis.json".split())
 
-    print(json.dumps(static_nodes, indent=2, sort_keys=True))
+    # As far as possible we un-conditionaly write the local disc state
+    # according to what we find in the blob. But RAFT_ID and static-nodes.json
+    # are dependent on registration state. And in the face of (development
+    # driven) ad-hoc node creation & destruction this takes a few extra steps.
+    def write_local_nodeconf(static_nodes, raftid):
+        with open(conf.nodedir.joinpath("static-nodes.json"), "w") as f:
+            json.dump(static_nodes, f, indent=2, sort_keys=True)
+        with open(conf.nodedir.joinpath("RAFT_ID"), "w") as f:
+            f.write(str(raftid))
 
-    ifound = None
-    for ifound, en in enumerate(static_nodes):
-        if en.startswith(f"enode://{enode}"):
+    enode_url = (
+        f"enode://{enode}@{conf.address}:{conf.port}"
+        f"?discport=0&raftport={conf.raftport}")
+
+    if not static_nodes:
+
+        static_nodes = [enode_url]
+
+        data = json.dumps(static_nodes, indent=2, sort_keys=True)
+        post_blob(token, conf.bucket, conf.static_nodes_blob, data=data, generation=generation)
+        write_local_nodeconf(static_nodes, 1)
+        # first node, nothing more to do.
+        return
+
+    # we can only reach here when adding a new node or when recovering a lost
+    # disc / nodedir. We specifically support reseting a node by deleting is
+    # persitent volume with this setup.
+
+    peers = {}
+    iregistered = None
+    for iregistered, peer in enumerate(static_nodes):
+
+        if peer.startswith(f"enode://{enode}"):
+            continue  # registered, only need to ensure local disc contents
+
+        o = urlparse(peer)
+        peer_enode, peer_addr = o.netloc.split("@", 1)
+
+        # TODO: the rpcport for the established nodes is not in static_nodes,
+        # we will need to get that from elsewhere. For now assuming they are
+        # all the same. a blob named after the enode address is the ultimate
+        # intent.
+        peers[peer_enode] = dict(enode=peer_enode, host=peer_addr.split(":", 1)[0])
+
+    if not peers:
+        # this node is the only entry in static nodes and registration all good.
+        write_local_nodeconf(static_nodes, 1)
+        return
+
+    # Chose one at random. We shouldn't need to care which one serves the
+    # following requests, stateful set configuration can start sequentially if
+    # we like but we specifically accomodate random/parallel startup. k8s
+    # exponential (and un configuraable) backof makes an explicit retry policy
+    # here worth considering.
+    peer = peers[random.choice(list(peers))]
+    peer_url = f"http://{peer['host']}:{conf.rpcport}/"
+
+    # Check the current cluster membership and ensure the local copy of RAFT_ID
+    # if we are members.
+    data = dict(jsonrpc="2.0", method="raft_cluster", id="1")
+    print(peer_url)
+    resp = requests.post(
+        peer_url, json=data, headers={"Content-Type": "application/json"}, timeout=9.1)
+
+    for m in json_response(resp)["result"]:
+
+        if m["nodeId"] == enode:
+
+            if not iregistered:
+                # this indicates we registered and failed to update the
+                # static-nodes blob. just error out. tlc on the blob can sort
+                # this out more safely than anything we could do here
+                raise Error("static-nodes.json not consistent with raft.cluster")
+
+            print(f"Restoring {conf.nodedir}/RAFT_ID: {m['raftId']}")
+            write_local_nodeconf(static_nodes, m["raftId"])
             return
 
-    # A network exists, but this node is not yet a member.
+    # Definitely not registered in the raft acording to the raft.cluster result
+    # we just got. And we can count on raft_addPeer failure to resolve any race
+    # with other workloads.
+    data = dict(
+        jsonrpc="2.0", method="raft_addPeer", params=[enode_url], id="1")
 
-    raise Error("join not implemented yet")
-    # print("Forbidden from updating static-nodes.json blob")
-    # resp = post_blob(
-    #    token, conf.bucket, conf.static_nodes_blob,
-    #    check_response=False,
-    #    json.dumps(static_nodes, indent=2, sort_keys=True), generation=0)
-    # if not resp:
-    #    if resp.status_code == 403:
-    #        # This means all is well but we are not a 'bootnode' and so are
-    #        # not allowed to update static-nodes json. If there is an
-    #        # actual permissions problem this 
-    #        return
-    #    json_response(resp)
+    raftid = json_response(
+        requests.post(
+            peer_url, json=data, headers={"Content-Type": "application/json"},
+            timeout=9.1))["result"]
+
+    # add ourselves to static-nodes.json, update the blob, and only if all of
+    # that goes ok, update the local disc state.
+    static_nodes.append(enode_url)
+
+    data = json.dumps(static_nodes, indent=2, sort_keys=True)
+    post_blob(token, conf.bucket, conf.static_nodes_blob, data=data, generation=generation)
+
+    write_local_nodeconf(static_nodes, raftid)
 
 
 def cmd_genesis(args):
@@ -283,6 +385,14 @@ def cmd_genesis(args):
     print(f"Created genesis document: {conf.genesis_blob}")
 
 
+def cmd_init(args):
+    """ensure the node is initialised
+
+    runs genesis and then nodeinit"""
+    cmd_genesis(args)
+    cmd_nodeinit(args)
+
+
 def arg_parser(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -301,6 +411,8 @@ def arg_parser(args=None):
     top.add_argument("--nodedir", help="override nodeconf dir for geth node data")
     top.add_argument("--nodekey", help="override nodeconf key location - must be outside of nodedir")
     top.add_argument("--nodenum", default=0)
+    top.add_argument("--address", default="127.0.0.1")
+    top.add_argument("--bind", default=None)
     top.add_argument("--nodeconf", default="nodeconf.json", help="node configuration")
     top.add_argument("--succeede", action="store_true", help="exit as though everything is ok")
     top.add_argument("--forever", action="store_true", help="ingore exceptions and run infinite while")
@@ -317,19 +429,19 @@ def arg_parser(args=None):
 
     p = subgroup.add_parser("nodeinit", help=cmd_nodeinit.__doc__)
     p.set_defaults(func=cmd_nodeinit)
-    args = top.parse_args()
 
-    return args
+    p = subgroup.add_parser("init", help=cmd_init.__doc__)
+    p.add_argument(
+        "-o", "--genesis", default="genesis.conf", help="where to write genesis doc")
+    p.add_argument(
+        "-G", "--genesisconf", default="genesisconf.json", help="genesis configuration")
+    p.set_defaults(func=cmd_init)
+
+    return top.parse_args()
 
 
 def run(args):
-
     return args.func(args)
-
-    # print(get_secret(token, "quorumpreempt", "qnode-0-key", "1"))
-    # print(get_blob(token, "quorumpreempt-cluster.g.buckets.thaumagen.com", "hello.txt"))
-    # print(post_blob_text(token, "quorumpreempt-cluster.g.buckets.thaumagen.com", "qnode-hello.txt", "I am qnode hear me roar"))
-    # print(get_blob(token, "quorumpreempt-cluster.g.buckets.thaumagen.com", "qnode-hello.txt"))
 
 
 if __name__ == "__main__":

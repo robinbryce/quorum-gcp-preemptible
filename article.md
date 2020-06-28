@@ -20,7 +20,7 @@ Inspired by and extending [k8s for cheap on google cloud](https://dev.to/verkkok
   * using Cloud KMS (hsm) backed key to wrap the secrets is possible but a
     *lot* more expensive and requires custom 'unwrap' code on the nodes
 * Google Cloud NAT, Workload Identity, Secrets Manager
-* kubeip and traefik for ingress
+* kubeip and traefik for ingress to web access layer workloads
   * it is questionable whether kubeip is the right solution, it results in
     'un-assigned' ip pricing (>10x expensive but still only 24 cents/day). May
     be able to achieve the same results by simply assigning the ip to the
@@ -69,12 +69,6 @@ auth bootstrapping
     gcloud container clusters get-credentials kluster
     gcloud auth application-default login
 
-### StatefulSet
-
-* create templates with nginx ref examples
-* update skaffold.yaml
-* scaffold run
-
 ## Skaffold gotchas
 
 * default setup almost just works. traefik taints only permit one instance so the
@@ -85,7 +79,16 @@ auth bootstrapping
 * --force allows skaffold to replace resource
 * patch
 
-## Network
+## Network - routing geth nodes
+
+The options routing of consortum nodes are not great.  Allocating dns names and
+ip addresses for every geth node would be, expensive and a lot of work, and
+there are plenty of guides out there focused on that sort of thing.
+
+Arranging to expose the geth nodes on different ports on the same ip/dns name
+is possible. But the resulting configuration isn't very realistic. With
+quorum's 2.4.0 release dns names are supported for the nodes declared in the
+'static nodes' configuration file. And also jk
 
 TODO:
 
@@ -417,8 +420,13 @@ Store in blob. Re-generate if blob missing. If blob missing ignore disk
 static-nodes.json store in blob
 
 get key from secret store fresh everytime. get static-nodes.json from blob
-every time. store in emptyDir. derive enode from key.
-If enode not in static-nodes (from blob) or blob missing re-initialise. move asside any prior node dir
+every time. store in emptyDir. derive enode from key.  If enode not in
+static-nodes (from blob) or blob missing re-initialise. move asside any prior
+node dir
+
+"Fatal: failed to find local enode ID" is symptomatic of not having the key in
+the node dir. In our case, not having fetched it from secrets manager or having
+fetched it and then written it to the wrong place or not at all.
 
 Do not attempt to automatically raft.removePeer.
 
@@ -497,18 +505,61 @@ ok,
 * join - create 'held' blob for member, content addressed by key, with raft id in
   `join' is not allowed to release the hold.
 
+### IP's and/or DNS names for quorum nodes
+
+Historically, geth nodes have always required static ip addresses. This seems
+to be due to the use of [Kademlia](https://en.wikipedia.org/wiki/Kademlia) in
+ethereum. It certainly offers no identification benefit - nodes all have
+pub/priv keys.
+
+Now, quorum offers [dns support](http://docs.goquorum.com/en/latest/Quorum%20Features/dns/)
+
+We still need at least one public IP if the nodes are to be routable accross
+the open internet (we may not want that).
+
+Can we combined dns names with SNI so we don't have to differentiate nodes
+using port numbers ?
 
 https://cloud.google.com/storage/docs/object-holds
+
+#### cluster config
+
+Kubernetes & Headless (StatefulSet) services
+
+[A/AAAA for headles services](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#a-aaaa-records)
+resolve to *sets of ip addresses*
+
+To allow for nodes to connect accross the open internet in the 'standard' gcp
+way there are 3 options listed here
+
+[GCP Preparting for Prod/Connecting to External Services](https://cloud.google.com/solutions/prep-kubernetes-engine-for-prod#connecting_from_inside_a_cluster_to_external_services)
+1. stub domains - forward some dns names to external dns.
+2. external name services - if the need is to map a few records back to
+   existing dns services
+3. services without selectors - most flexible but highest maintenance cost.
+
+CubeDNS + GCP articles point towards in-cluster "self-service" dns
+
+* gke means kube-dns unless willing to do [significant special config](https://medium.com/google-cloud/using-coredns-on-gke-3973598ab561)
+* [CoreDNS/Fabric Orderer](https://medium.com/google-cloud/coredns-afaa732aa35e)
+
+
+[Kubernetes dns-pod-service](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
+
+firewall rule from reference article only open 80, 443
+# By default, firewall rules restrict cluster master to only initiate TCP connections to nodes on ports 443 (HTTPS) and 10250 (kubelet)
 
 TODO:
 
 * [x] standup vanila pod with pvc
 * [x] deliver nodekey to pod using workload identity
 * [x] deliver wallet key to pod using workload identity
+* [x] do gensis
+* [ ] sort out node routing ip/dns.
+* [ ] do member add
+* [ ] qnodeinit.py init command which does both genesis and nodeinit
 * [ ] consider curl + jq for quorum main image so we can put nodekey in
       emptyDir
-* [ ] do gensis
-* [ ] do member add
 * [ ] ? store pods configuration in blob object named after its public key
 * [ ] in cloud builds
 * [ ] rename qnodeinit.py to raftnode.py or qraft.py or something 'rafty'

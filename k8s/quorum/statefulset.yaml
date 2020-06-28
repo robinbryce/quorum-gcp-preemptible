@@ -1,20 +1,25 @@
+# See https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: qnode
+  labels:
+    app: qnode
 spec:
   selector:
     matchLabels:
-      app: qnode  # Label selector that determines which Pods belong to the StatefulSet
-                  # Must match spec: template: metadata: labels
-  serviceName: "qnode"
-  replicas: 1  # default nodes per deployments (1 is fine), sans istio kubectl scale adds nodes
+      app: qnode
+      # Label selector that determines which Pods belong to the StatefulSet
+      # Must match spec: template: metadata: labels
+  serviceName: qnode
+  replicas: 2  # default nodes per deployments (1 is fine), sans istio kubectl scale adds nodes
   template:
     metadata:
       labels:
-        app: qnode # Pod template's label selector
-        skaffold.dev/run-id: static
-        app.kubernetes.io/managed-by: skaffold
+        app: qnode
+        # Pod template's label selector
+        #skaffold.dev/run-id: static
+        #app.kubernetes.io/managed-by: skaffold
     spec:
       serviceAccountName: quorum-node-sa
       terminationGracePeriodSeconds: 10
@@ -49,13 +54,11 @@ spec:
           - -cx
           - |
             set -e
+            find /var/lib/quorum
             python3 qnodeinit.py \
               --nodedir=/var/lib/quorum/node \
-             genesis
-            python3 qnodeinit.py \
-              --nodedir=/var/lib/quorum/node \
-              --nodenum=${POD_NAME#*-} \
-              nodeinit
+              --address=${POD_NAME}.qnode.default.svc.cluster.local \
+              --nodenum=${POD_NAME#*-} init
 
       containers:
       - name: qnode
@@ -80,10 +83,7 @@ spec:
 
             NODEDIR=/var/lib/quorum/node
             REPLICA_NUMBER=${POD_NAME#*-}
-            RAFT_ID=1
-            if [ -f ${NODEDIR}/RAFT_ID ]; then
-              RAFT_ID=$(cat ${NODEDIR}/RAFT_ID)
-            fi
+            RAFT_ID=$(cat ${NODEDIR}/RAFT_ID)
             export PRIVATE_CONFIG=ignore
 
             RAFT_ARGS="--raft"
@@ -91,6 +91,7 @@ spec:
               RAFT_ARGS="$RAFT_ARGS  --raftjoinexisting ${RAFT_ID}"
             fi
             geth \
+              --raftdnsenable \
               --identity $POD_NAME \
               --datadir $NODEDIR \
               --gcmode archive \

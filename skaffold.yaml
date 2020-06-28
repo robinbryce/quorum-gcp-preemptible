@@ -42,6 +42,12 @@ deploy:
     - k8s/quorum/service.yaml
 
 profiles:
+  - name: dev
+    deploy:
+      kubectl:
+        manifests:
+        - k8s/dnsutils/dnsutils.yaml
+
   - name: qnode
     deploy:
       kubectl:

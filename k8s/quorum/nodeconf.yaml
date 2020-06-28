@@ -17,7 +17,7 @@ data:
         "dir": "/var/lib/quorum/node",
         "bucket": "quorumpreempt-cluster.g.buckets.thaumagen.com",
         "bind": "127.0.0.1",
-        "ipaddress": "127.0.0.1",
+        "address": "127.0.0.1",
         "port": 30303,
         "rpcport": 8545,
         "wsport": 8546,

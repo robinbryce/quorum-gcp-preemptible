@@ -17,8 +17,7 @@ RUN \
 
 COPY commoncli.py /service/
 COPY qnodeinit.py /service/
-COPY test.py /service/
 ENTRYPOINT ["/usr/bin/python3"]
 ENV PYTHONPATH="/service"
 ENV PYTHONUNBUFFERED=1
-CMD ["qnodeinit.py", "--nodedir", "/var/lib/quorum/node", "--forever"]
+CMD ["qnodeinit.py", "--nodedir", "/var/lib/quorum/node"]
