@@ -1,0 +1,41 @@
+FROM golang:1.13 as builder
+ENV SOLIDITY_VERSION=0.6.3
+ENV PROTOC_VERSION=3.11.2
+ENV PROTOBUF_VERSION=1.3.2
+ENV PROTO_GEN_VALIDATE_VERSION=v0.3.0
+ENV GRPC_GATEWAY_VERSION=1.14.1
+ENV GRPC_HEALTH_PROBE_VERSION=v0.3.1
+
+# It is safe to use upstream go-ethereum's abigen with quorums fork. It
+# generates *client* code
+ENV GO_ETHEREUM_VERSION=1.9.11
+ENV GO111MODULE=on
+
+ADD https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64 /usr/local/bin/grpc_health_probe
+ADD https://github.com/ethereum/solidity/releases/download/v${SOLIDITY_VERSION}/solc-static-linux  /usr/local/bin/solc
+
+RUN \
+    apt-get update && apt-get upgrade -y --no-install-recommends && \
+    apt-get install -y \
+        unzip
+
+RUN \
+    $(cd /usr/local && curl -O https://taskfile.dev/install.sh && \
+        sh install.sh && \
+        rm -f install.sh) && \
+    curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+        unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local bin/protoc && \
+        chmod +x /usr/local/bin/protoc  && \
+        unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local include/* && \
+        rm -rf protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    go get \
+        github.com/ethereum/go-ethereum@v${GO_ETHEREUM_VERSION} \
+        github.com/ethereum/go-ethereum/cmd/abigen@v${GO_ETHEREUM_VERSION} \
+        github.com/golang/protobuf/protoc-gen-go@v${PROTOBUF_VERSION} \
+        github.com/grpc-ecosystem/grpc-gateway@v${GRPC_GATEWAY_VERSION} \
+        github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v${GRPC_GATEWAY_VERSION} \
+        github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v${GRPC_GATEWAY_VERSION} \
+        github.com/envoyproxy/protoc-gen-validate@${PROTO_GEN_VALIDATE_VERSION} \
+        && \
+        chmod +rx /usr/local/bin/grpc_health_probe && \
+        chmod a+x /usr/local/bin/solc

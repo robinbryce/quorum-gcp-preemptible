@@ -5,3 +5,5 @@ __pycache__
 dotterraformrc
 credentials
 project-key.json
+*.pb.go
+*.pb.gw.go

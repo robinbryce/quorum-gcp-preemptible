@@ -1,0 +1,73 @@
+
+syntax = "proto3";
+package adder.v1;
+option go_package="github.com/robinbryce/quorum-gcp-preemptible/adder/api/adder/v1/adder";
+
+import "google/api/annotations.proto";
+
+message SetRequest {
+    string value = 1;
+}
+
+message SetResponse {
+    string value = 1;
+}
+
+message GetRequest {
+}
+
+message GetResponse {
+    string value = 1;
+}
+
+message AddRequest {
+    string value = 1;
+}
+
+message AddResponse {
+    string value = 1;
+}
+
+service Adder {
+    rpc Set(SetRequest) returns (SetResponse) {
+        option (google.api.http) = {
+        post: "/quorumpreempt/v1/adder/set"
+        body: "*"
+        };
+    }
+    rpc Get(GetRequest) returns (GetResponse) {
+        option (google.api.http) = {
+        post: "/quorumpreempt/v1/adder/get"
+        body: "*"
+        };
+    }
+    rpc Add(AddRequest) returns (AddResponse) {
+        option (google.api.http) = {
+        post: "/quorumpreempt/v1/adder/add"
+        body: "*"
+        };
+    }
+}
+
+// Health check request to find out the readiness/liveness.
+message HealthCheckRequest {
+  string service = 1;
+}
+
+// Health check response.
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;  // Used only by the Watch method.
+
+  }
+  ServingStatus status = 1;
+}
+
+// Health check request.
+service Health {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc Watch(HealthCheckRequest) returns (HealthCheckResponse);
+}

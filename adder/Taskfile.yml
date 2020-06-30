@@ -1,0 +1,40 @@
+version: '2'
+vars:
+  PROTO_GEN_GO_DIR:
+    sh: echo $(go list -f {{"{{"}}.Dir{{"}}"}} github.com/golang/protobuf/protoc-gen-go)
+  GRPC_GATEWAY_DIR:
+    sh: echo $(dirname $(GOCACHE=/tmp/jitsuin/avid go list -f {{"{{"}}.Dir{{"}}"}} github.com/grpc-ecosystem/grpc-gateway/runtime))
+  PROTOC_INC: "-I {{.PROTO_GEN_GO_DIR}}/descriptor -I {{.GRPC_GATEWAY_DIR}}/third_party/googleapis -I {{.GRPC_GATEWAY_DIR}}"
+  # see https://github.com/golang/protobuf/issues/143
+  GOPKG_OVERRIDES: ",Mgoogle/protobuf/field_mask.proto=google.golang.org/genproto/protobuf/field_mask"
+
+tasks:
+  build:
+    desc: build the adder service
+    env:
+      CGO_ENABLED: 1
+      GOARCH: amd64
+      GOBIN:
+        sh: echo $(pwd)/bin
+      GO111MODULE: on
+    vars:
+      INSTALL_PACKAGES: >-
+        github.com/robinbryce/quorum-gcp-preemptible/adder/service
+        github.com/robinbryce/quorum-gcp-preemptible/adder/proxy
+
+    cmds:
+      - mkdir -p abi
+      - |
+        solc \
+        --evm-version=constantinople \
+        --overwrite \
+        --bin --bin-runtime --abi \
+        --output-dir ./abi \
+        getsetadd.sol
+      - mkdir -p adder
+      - abigen --pkg adder --out adder/adder.go --abi=./abi/Adder.abi --bin=./abi/Adder.bin --type=Adder
+      - mkdir -p bin
+      - cp /etc/ssl/certs/ca-certificates.crt bin
+      - cp /usr/local/bin/grpc_health_probe bin
+      - protoc -I. {{.PROTOC_INC}} --go_out=paths=source_relative,plugins=grpc{{.GOPKG_OVERRIDES}}:. --grpc-gateway_out=paths=source_relative,logtostderr=true:. api/adder/v1/*.proto
+      - go install {{.INSTALL_PACKAGES}}

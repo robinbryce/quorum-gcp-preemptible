@@ -21,6 +21,8 @@ spec:
         #skaffold.dev/run-id: static
         #app.kubernetes.io/managed-by: skaffold
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: work-pool
       serviceAccountName: quorum-node-sa
       terminationGracePeriodSeconds: 10
       volumes:
