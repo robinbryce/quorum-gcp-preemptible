@@ -52,10 +52,19 @@ type adderService struct {
 
 func responseFromTransaction(tx *types.Transaction) *v1adder.TransactionResponse {
 
-	tr := &v1adder.TransactionResponse{}
+	log.Printf("tx: %v", tx)
+	if tx == nil {
+		return nil
+	}
+	tr := &v1adder.TransactionResponse{
+		Data: &v1adder.Transaction{},
+	}
 	tr.Data.Nonce = tx.Nonce()
 	tr.Data.GasPrice = tx.GasPrice().Bytes()
-	tr.Data.To = tx.To().Bytes()
+	to := tx.To()
+	if to != nil {
+		tr.Data.To = to.Bytes()
+	}
 	tr.Data.Value = tx.Value().Bytes()
 	tr.Data.Payload = tx.Data()
 
@@ -73,6 +82,7 @@ func (a *adderService) Set(
 	ctx context.Context, req *v1adder.SetRequest) (*v1adder.TransactionResponse, error) {
 
 	v := big.NewInt(0).SetBytes(req.Value)
+	log.Printf("setting: %v", v)
 
 	tx, err := a.adder.Set(a.auth, v)
 	if err != nil {
@@ -96,8 +106,9 @@ func (a *adderService) Add(
 	ctx context.Context, req *v1adder.AddRequest) (*v1adder.TransactionResponse, error) {
 
 	v := big.NewInt(0).SetBytes(req.Value)
+	log.Printf("adding: %v", v)
 
-	tx, err := a.adder.Set(a.auth, v)
+	tx, err := a.adder.Add(a.auth, v)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "add: %v", err)
 	}

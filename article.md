@@ -610,6 +610,41 @@ For deeper examples and tooling for Contracts As A Service see:
 * https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7
 * https://medium.com/@deeptiman/protobuf-in-hyperledger-fabric-eb674ba9ebd8
 
+brew install grpcurl
+k9s port-forward access to the adder pod
+
+use of protset output with [grpcurl](https://github.com/fullstorydev/grpcurl)
+
+    ONE=$(echo "1" | base64)
+
+    grpcurl --plaintext -protoset ./adder.protset \
+        -d '{"value":"'$ONE'"}' localhost:9091 adder.v1.Adder.Set
+
+response is like
+
+{
+  "data": {
+    "nonce": 41,
+    "to": "I4L4/AZj6NB+HO2ZHBpoWJUY6H4=",
+    "payload": "YP5HsQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADEK",
+    "v": "HA==",
+    "r": "D7bWbsTFV8BqR2YG4iVsR117TNZRENXchjgbs9lILCw=",
+    "s": "dpKEG12rtsIqu/lSOSCJBEXBJWFcC8NQKpvAvdg5gJY="
+  },
+}
+
+Get tx hash as hex
+
+    grpcurl --plaintext -protoset ./adder.protset \
+        -d '{"value":"'$ONE'"}' localhost:9091 adder.v1.Adder.Add \
+        | jq -r .hash | base64 -D  | hexdump -v -e '/1 "%02x"'
+
+Get the current value
+
+    grpcurl --plaintext -protoset ./adder.protset localhost:9091 \
+        adder.v1.Adder.Get | jq -r .value | base64 -D
+    2
+
 TODO:
 
 * [x] standup vanila pod with pvc

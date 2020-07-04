@@ -36,5 +36,11 @@ tasks:
       - mkdir -p bin
       - cp /etc/ssl/certs/ca-certificates.crt bin
       - cp /usr/local/bin/grpc_health_probe bin
-      - protoc -I. {{.PROTOC_INC}} --go_out=paths=source_relative,plugins=grpc{{.GOPKG_OVERRIDES}}:. --grpc-gateway_out=paths=source_relative,logtostderr=true:. api/adder/v1/*.proto
+      - |
+        protoc -I. {{.PROTOC_INC}} \
+          --go_out=paths=source_relative,plugins=grpc{{.GOPKG_OVERRIDES}}:. \
+          --grpc-gateway_out=paths=source_relative,logtostderr=true:. \
+          --descriptor_set_out=adder.protset \
+          --include_imports \
+            api/adder/v1/*.proto
       - go install {{.INSTALL_PACKAGES}}
