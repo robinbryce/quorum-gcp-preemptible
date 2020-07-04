@@ -34,10 +34,10 @@ import (
 )
 
 const (
-	// It is critical that this amount is less than the target floor for the
-	// block gas limit. Which defaults to 700,000,000 and is set by the
-	// --miner.gastarget cli switch for geth. We also want it as big as possible
-	// so as to never have to worry about gas.
+	// Quorum Specific GasLimit strategy: It is critical that this amount is
+	// less than the target floor for the block gas limit. Which defaults to
+	// 700,000,000 and is set by the --miner.gastarget cli switch for geth. We
+	// also want it as big as possible so as to never have to worry about gas.
 	transactionGasLimit = 500000000
 	receiptTimeout      = 15 * time.Second
 )
@@ -50,16 +50,59 @@ type adderService struct {
 	adder     *adder.Adder
 }
 
-func (a *adderService) Set(ctx context.Context, req *v1adder.SetRequest) (*v1adder.SetResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Set not implemented")
+func responseFromTransaction(tx *types.Transaction) *v1adder.TransactionResponse {
+
+	tr := &v1adder.TransactionResponse{}
+	tr.Data.Nonce = tx.Nonce()
+	tr.Data.GasPrice = tx.GasPrice().Bytes()
+	tr.Data.To = tx.To().Bytes()
+	tr.Data.Value = tx.Value().Bytes()
+	tr.Data.Payload = tx.Data()
+
+	v, r, s := tx.RawSignatureValues()
+
+	tr.Data.V = v.Bytes()
+	tr.Data.R = r.Bytes()
+	tr.Data.S = s.Bytes()
+
+	tr.Hash = tx.Hash().Bytes()
+	return tr
 }
 
-func (a *adderService) Get(ctx context.Context, req *v1adder.GetRequest) (*v1adder.GetResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+func (a *adderService) Set(
+	ctx context.Context, req *v1adder.SetRequest) (*v1adder.TransactionResponse, error) {
+
+	v := big.NewInt(0).SetBytes(req.Value)
+
+	tx, err := a.adder.Set(a.auth, v)
+	if err != nil {
+		return nil, status.Errorf(codes.Unknown, "set: %v", err)
+	}
+
+	return responseFromTransaction(tx), nil
 }
 
-func (a *adderService) Add(ctx context.Context, req *v1adder.AddRequest) (*v1adder.AddResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
+func (a *adderService) Get(
+	ctx context.Context, req *v1adder.GetRequest) (*v1adder.GetResponse, error) {
+
+	v, err := a.adder.Get(nil)
+	if err != nil {
+		return nil, status.Errorf(codes.Unknown, "get: %v", err)
+	}
+	return &v1adder.GetResponse{Value: v.Bytes()}, nil
+}
+
+func (a *adderService) Add(
+	ctx context.Context, req *v1adder.AddRequest) (*v1adder.TransactionResponse, error) {
+
+	v := big.NewInt(0).SetBytes(req.Value)
+
+	tx, err := a.adder.Set(a.auth, v)
+	if err != nil {
+		return nil, status.Errorf(codes.Unknown, "add: %v", err)
+	}
+
+	return responseFromTransaction(tx), nil
 }
 
 func newTransactor(key *ecdsa.PrivateKey) *bind.TransactOpts {

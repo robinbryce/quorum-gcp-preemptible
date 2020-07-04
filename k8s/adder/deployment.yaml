@@ -32,12 +32,13 @@ spec:
             TOKEN=$(curl -s -H 'Metadata-Flavor: Google' \
               http://metadata/computeMetadata/v1/instance/service-accounts/default/token | \
               jq -r .access_token)
+            [ -n "$TOKEN" ] || exit 1
             curl -sS "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/qnode-0-wallet-key/versions/latest:access" \
               --request "GET" \
               --header "authorization: Bearer ${TOKEN}" \
               --header "content-type: application/json" | \
               jq -r .payload.data | base64 -d > /service/wallet/key
-            wc -c /service/wallet/key
+            [ $(wc -c < /service/wallet/key) == 32 ] || exit 1
         volumeMounts:
         - mountPath: /service/wallet
           name: wallet

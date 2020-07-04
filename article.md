@@ -8,6 +8,17 @@ tools & techniques without imposing 'production' costs (time and money)
 
 Inspired by and extending [k8s for cheap on google cloud](https://dev.to/verkkokauppacom/how-to-kubernetes-for-cheap-on-google-cloud-1aei)
 
+What can you do with this ? Operate your own CaaS (Contracts As A Service) ala
+
+* https://medium.com/getamis/sol2proto-694af65ded55
+* https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7
+* https://medium.com/@deeptiman/protobuf-in-hyperledger-fabric-eb674ba9ebd8
+
+By spreading our dlt nodes around a cluster of pre-emptible virtual machines we
+can get a reliable service on top of "cheap" un-reliable resources.
+
+![Costs - 90 days](./costs-90days.png)
+
 ## What - overview
 
 * quorum deployment with raft consensus and optional tessera (private transactions),
@@ -19,15 +30,21 @@ Inspired by and extending [k8s for cheap on google cloud](https://dev.to/verkkok
   principals.
   * using Cloud KMS (hsm) backed key to wrap the secrets is possible but a
     *lot* more expensive and requires custom 'unwrap' code on the nodes
-* Google Cloud NAT, Workload Identity, Secrets Manager
-* kubeip and traefik for ingress to web access layer workloads
+  * can't avoid node keys on disc (clef can fix this?), but can make it
+    transitory and ram based
+  * could (probably) avoid wallet keys on disc - or at least puting them on
+    disc ourselves - but its more work. currently, and this is normal when
+    using go-ethereum based clients - clients all sign and send raw tx's. don't
+    think clef is compatible with this.
+* Use of Google Cloud NAT, Workload Identity, Secrets Manager
+* Use of kubeip and traefik for ingress to web access layer workloads
   * it is questionable whether kubeip is the right solution, it results in
     'un-assigned' ip pricing (>10x expensive but still only 24 cents/day). May
     be able to achieve the same results by simply assigning the ip to the
     ingress instance in the tf config - and lose kubeip altogether.
   * update my cost breakdown shows the static ip is the 2nd most expensive
     item. it is *more* expensive than some of my vm instances
-* go-ethereum service exposing contract functions as rest endpoints.
+* go-ethereum service exposing contract functions as rest endpoints (hello CaaS)
 * terraform cloud hosted and git controled cluster configuration.
 * kubernetes pod authorisation using k8s service accounts bound to GCP
   principals using workload identity
@@ -36,9 +53,39 @@ Inspired by and extending [k8s for cheap on google cloud](https://dev.to/verkkok
 * blob (bucket) storage for tracking deployed contracts and their abi's
 * skaffold for build/deploy/test
 
-## Key modifications from referenced article
+## Key modifications from referenced 'cheap cluster' article
 * use workload identity for kubeib
 * use strategy 'replace' for traeffic - rolling update can't possible work with how the node taints are setup
+
+## How to stand up the cluster - fast
+
+Section for reader that wants to stand up the cluster and dlt as well as read
+about it. checkout -> operational as directly as possible.
+
+### cluster
+* fork
+* google cloud project setup
+* tf cloud setup
+* git commit
+* make coffee - tada!
+
+### Auth bootstrap (dev cli)
+
+auth bootstrapping
+
+    gcloud init (to set all the defaults)
+    gcloud container clusters get-credentials kluster
+    gcloud auth application-default login
+
+### Skaffold gotchas
+
+* default setup almost just works. traefik taints only permit one instance so the
+  replacement is stuck pending until the old instance is manually deleted.
+* kubectl deployment needs extra work (or can't handle) dependence on customer
+  resource definitions or definition order dependencies
+  [order of manifest respected since aug 2019](https://github.com/GoogleContainerTools/skaffold/pull/2729)
+* --force allows skaffold to replace resource
+* patch
 
 ## Zero Cost at Idle (close as possible)
 
@@ -53,42 +100,18 @@ This may not be perfectly realizable. This is a list of things that affect it.
     cluster deletion and that is >0 charge
 * dns names if using
 
-## How - fast
-
-### cluster
-
-* google cloud project setup
-* tf cloud setup
-* git commit
-
-### Auth bootstrap (dev cli)
-
-auth bootstrapping
-
-    gcloud init (to set all the defaults)
-    gcloud container clusters get-credentials kluster
-    gcloud auth application-default login
-
-## Skaffold gotchas
-
-* default setup almost just works. traefik taints only permit one instance so the
-  replacement is stuck pending until the old instance is manually deleted.
-* kubectl deployment needs extra work (or can't handle) dependence on customer
-  resource definitions or definition order dependencies
-  [order of manifest respected since aug 2019](https://github.com/GoogleContainerTools/skaffold/pull/2729)
-* --force allows skaffold to replace resource
-* patch
-
 ## Network - routing geth nodes
 
-The options routing of consortum nodes are not great.  Allocating dns names and
-ip addresses for every geth node would be, expensive and a lot of work, and
-there are plenty of guides out there focused on that sort of thing.
+The options for 'cheap' routing of consortum nodes are not great.  Allocating
+dns names and ip addresses for every geth node would be expensive and a lot of
+work. And there are plenty of guides out there focused on that sort of thing.
 
 Arranging to expose the geth nodes on different ports on the same ip/dns name
 is possible. But the resulting configuration isn't very realistic. With
 quorum's 2.4.0 release dns names are supported for the nodes declared in the
-'static nodes' configuration file. And also jk
+'static nodes' configuration file. Using dns names to reference the nodes makes
+it *look* like a public internet in a lot of places. And that is probably
+enough for most realistic personal development scenarious.
 
 TODO:
 
@@ -108,7 +131,7 @@ collaboration.
 
 Hybrid cloud Cloud VPN is for self hosted *and* on-prem nodes
 
-## Workloads
+## Kubernetes Workloads
 
 ### Identity and Authorization
 
@@ -188,12 +211,98 @@ Note that we _do not_ create the secret with terraform as that exposes the
 plain text in the state file. terrafor cloud encrypts that at rest but its
 still not great.
 
-#### Secret creation, terraform resource declaration & import
+### Storage for chain nodes
+
+* persistent disc on vm for chain data
+* persistent disc on vm for tessera db (anything else is $$$)
+* blob storage in bucket for genesis, network membership (static-nodes) and
+  node config.
+
+### Resources - Perstent Volumes, StatefulSets, Istio (StatefulSets not really supported)
+
+* [Google Cloud, PersistentVolumeClaim](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes)
+* [Google Cloud, StatefulSet](https://cloud.google.com/kubernetes-engine/docs/concepts/statefulset)
+
+Reclaim policy to retain after claim gone ? [k8s pv reclaim policy](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/)
+This has to be done by directly modifying the Persistent Voluem *after* it has
+been provisioned. See [change reclaim policy on a dynamically provissioned volume](https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/)
+
+> StatefulSets use an ordinal index for the identity and ordering of their
+> Pods. By default, StatefulSet Pods are deployed in sequential order and are
+> terminated in reverse ordinal order
+-- [Google Cloud, StatefulSet](https://cloud.google.com/kubernetes-engine/docs/concepts/statefulset)
+
+Parallel should be fine, although the default OrderedReady may be more
+convenient it encourages un-necessary order dpendency.
+
+It may prove tempting to use a Deployment and ReadWriteOnce with a single node.
+This isn't a reliable configuration. See [Google - Deployment vs StatefulSets](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#deployments_vs_statefulsets)
+
+A StatefulSet with a single replica is the right choice for scenarious where a
+single helm deployment equates to a single dlt node.
+
+Without Istio in play, our setup enables use of kubectl scale to dynamicaly
+increase the node count.
+
+updateStragety (statefulset)
+
+For RollingUpdate a onfig change starts a new pod. The old pod is only deleted
+once the new one is up and ready.
+
+??? If the new pod is re-using the node key of the old this will/will not work ?
+
+For OnDelete, a manual pod deletion triggers a new pod to be created.
+
+??? Individual node key delivery to pods in stateful set ?
+
+Istio users beware, istio has ambigious (at best) support for StatefulSet
+applications. In short, if the nodes are *NOT EXTERNALY EXPOSED* then it is
+possible to have them 'in mesh' without much trouble. If the are to be routable
+accross the open internet, it is still possible, but explicit istio
+configuration needs to be created for each scaled instance of the StatefulSet.
+
+If external clients usage is agnostic to which quorum instance they talk
+to, it is actually ok to let istio lb the traffict. This works pretty well
+until tessera is added - at which point using raw transactions (as go-ethereum
+clients do) make things quite hairy. The tx needs to be submited first to
+tessera then its hash presented to quorum in a seperate request. There are ways
+to make it rare that those request pairs will reach different services but it
+will still happen.
+
+And tessera instances MUST be able to reliably reach specific peers else they
+will refuse to ACK transactions.
+
+This article on casandra has the key points layed out very well
+if using ClusterIP: None (headless) and where only internal routing is required
+(No north/south from external sources)
+
+[Cassandra / Istio Article](https://aspenmesh.io/running-stateless-apps-with-service-mesh-kubernetes-cassandra-with-istio-mtls-enabled/)
+* Congigure container processes (qurorum) to listen on local host (despite
+    recording externaly visible ip/hosts in static-nodes.json)
+* REMOVE/DON'T ADD ServiceEntry's or VirtualService definitions
+* For ClusterIP: None, the default load balancing mode is PASSTHROUGH
+
+This article covers North/South. Essentially, a manualy, or some how templated,
+ServiceEntry, Gateway and VirtualService are required for *each individual pod*
+in the statefulset -- this is a problem for using kubectl scale 'on the flye'
+[Istio, Headless Services, StatefulSet](https://medium.com/airy-science/making-istio-work-with-kubernetes-statefulset-and-headless-services-d5725c8efcc9)
+
+This will wrap traffic in mTLS. Note that as quorum now supports rpc over tls
+this may not be as compelling any more.
+
+[Istio, Headless Services, StatefulSet](https://medium.com/airy-science/making-istio-work-with-kubernetes-statefulset-and-headless-services-d5725c8efcc9)
+[Istio ticket statefulset not supported](https://github.com/istio/istio/issues/10659)
+[Cassandra / Istio Article](https://aspenmesh.io/running-stateless-apps-with-service-mesh-kubernetes-cassandra-with-istio-mtls-enabled/)
+
+
+## Secret creation, terraform resource declaration & import
 
 We pre-create a bunch of keys and set the IAM's 'before the show'. Remote State
 and a TF project per node offers better granularity but a whole tf project per
 node is pretty heavy weight. Pre-creation of 'light weight' resources doesn't
 significantly impact our costs and is less faffy
+
+[secret generation support](./Taskfile.yml)
 
 
 Create the secrets for the nodes. This requires some setup.
@@ -294,7 +403,7 @@ See also,
   Integrates with Google Secrets Manager and Google Workload Identity
 Glossy [Google - Secret Manager](https://cloud.google.com/secret-manager)
 
-### Protocol Selection (Istio Compatibility) Ports and IP Assignment
+## Protocol Selection (Istio Compatibility) Ports and IP Assignment
 
 If considering adding istio to the mix, port names matter if deploying on k8s <
 1.18. [Istio - Protocol Selection](https://istio.io/latest/docs/ops/configuration/traffic-management/protocol-selection/)
@@ -318,89 +427,6 @@ cluster to reduce our monthly google bill to zero.
 
 We can the use the magic of terraform cloud to stand everything up again in
 'cup of coffee' time frame.
-
-### Storage for chain nodes
-
-* persistent disc on vm for chain data
-* persistent disc on vm for tessera db (anything else is $$$)
-* blob storage in bucket for genesis, network membership (static-nodes) and
-  node config.
-
-#### Resources - Perstent Volumes, StatefulSets, Istio (StatefulSets not really supported)
-
-* [Google Cloud, PersistentVolumeClaim](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes)
-* [Google Cloud, StatefulSet](https://cloud.google.com/kubernetes-engine/docs/concepts/statefulset)
-
-Reclaim policy to retain after claim gone ? [k8s pv reclaim policy](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/)
-This has to be done by directly modifying the Persistent Voluem *after* it has
-been provisioned. See [change reclaim policy on a dynamically provissioned volume](https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/)
-
-> StatefulSets use an ordinal index for the identity and ordering of their
-> Pods. By default, StatefulSet Pods are deployed in sequential order and are
-> terminated in reverse ordinal order
--- [Google Cloud, StatefulSet](https://cloud.google.com/kubernetes-engine/docs/concepts/statefulset)
-
-Parallel should be fine, although the default OrderedReady may be more
-convenient it encourages un-necessary order dpendency.
-
-It may prove tempting to use a Deployment and ReadWriteOnce with a single node.
-This isn't a reliable configuration. See [Google - Deployment vs StatefulSets](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#deployments_vs_statefulsets)
-
-A StatefulSet with a single replica is the right choice for scenarious where a
-single helm deployment equates to a single dlt node.
-
-Without Istio in play, our setup enables use of kubectl scale to dynamicaly
-increase the node count.
-
-updateStragety (statefulset)
-
-For RollingUpdate a onfig change starts a new pod. The old pod is only deleted
-once the new one is up and ready.
-
-??? If the new pod is re-using the node key of the old this will/will not work ?
-
-For OnDelete, a manual pod deletion triggers a new pod to be created.
-
-??? Individual node key delivery to pods in stateful set ?
-
-Istio users beware, istio has ambigious (at best) support for StatefulSet
-applications. In short, if the nodes are *NOT EXTERNALY EXPOSED* then it is
-possible to have them 'in mesh' without much trouble. If the are to be routable
-accross the open internet, it is still possible, but explicit istio
-configuration needs to be created for each scaled instance of the StatefulSet.
-
-If external clients usage is agnostic to which quorum instance they talk
-to, it is actually ok to let istio lb the traffict. This works pretty well
-until tessera is added - at which point using raw transactions (as go-ethereum
-clients do) make things quite hairy. The tx needs to be submited first to
-tessera then its hash presented to quorum in a seperate request. There are ways
-to make it rare that those request pairs will reach different services but it
-will still happen.
-
-And tessera instances MUST be able to reliably reach specific peers else they
-will refuse to ACK transactions.
-
-This article on casandra has the key points layed out very well
-if using ClusterIP: None (headless) and where only internal routing is required
-(No north/south from external sources)
-
-[Cassandra / Istio Article](https://aspenmesh.io/running-stateless-apps-with-service-mesh-kubernetes-cassandra-with-istio-mtls-enabled/)
-* Congigure container processes (qurorum) to listen on local host (despite
-    recording externaly visible ip/hosts in static-nodes.json)
-* REMOVE/DON'T ADD ServiceEntry's or VirtualService definitions
-* For ClusterIP: None, the default load balancing mode is PASSTHROUGH
-
-This article covers North/South. Essentially, a manualy, or some how templated,
-ServiceEntry, Gateway and VirtualService are required for *each individual pod*
-in the statefulset -- this is a problem for using kubectl scale 'on the flye'
-[Istio, Headless Services, StatefulSet](https://medium.com/airy-science/making-istio-work-with-kubernetes-statefulset-and-headless-services-d5725c8efcc9)
-
-This will wrap traffic in mTLS. Note that as quorum now supports rpc over tls
-this may not be as compelling any more.
-
-[Istio, Headless Services, StatefulSet](https://medium.com/airy-science/making-istio-work-with-kubernetes-statefulset-and-headless-services-d5725c8efcc9)
-[Istio ticket statefulset not supported](https://github.com/istio/istio/issues/10659)
-[Cassandra / Istio Article](https://aspenmesh.io/running-stateless-apps-with-service-mesh-kubernetes-cassandra-with-istio-mtls-enabled/)
 
 ## Quorum
 
@@ -569,6 +595,21 @@ CubeDNS + GCP articles point towards in-cluster "self-service" dns
 firewall rule from reference article only open 80, 443
 # By default, firewall rules restrict cluster master to only initiate TCP connections to nodes on ports 443 (HTTPS) and 10250 (kubelet)
 
+## Starting point for Contracts As A Service (CaaS)
+
+adder 'getsetadd.sol' and go-ethereum based grpc wrapper service Hello 'CaaS'.
+
+* [getsetadd.sol](./adder/getsetadd.sol)
+* [main.go](./adder/main.go)
+* [adder.proto](./adder/api/adder/v1/adder.proto)
+* [Taskfile.yml](./adder/Taskfile.yml)
+
+For deeper examples and tooling for Contracts As A Service see:
+
+* https://medium.com/getamis/sol2proto-694af65ded55
+* https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7
+* https://medium.com/@deeptiman/protobuf-in-hyperledger-fabric-eb674ba9ebd8
+
 TODO:
 
 * [x] standup vanila pod with pvc
@@ -578,8 +619,18 @@ TODO:
 * [x] sort out node routing ip/dns.
 * [x] do member add
 * [x] qnodeinit.py init command which does both genesis and nodeinit
+* [ ] get/set/add with tx response in api for adder service example
+* [ ] follow the pattern from [here](https://github.com/getamis/grpc-contract/blob/master/examples/cmd/server/main.go)
+for contract deployment
+* [ ] caas example using
+  * https://medium.com/getamis/sol2proto-694af65ded55
+  * https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7
+  * https://medium.com/@deeptiman/protobuf-in-hyperledger-fabric-eb674ba9ebd8
+* [ ] node affinity to spread the dlt nodes around for preempt resilience
+* [ ] premise and outline to marta
 * [ ] account convenience script for unlocking and using our genesis funded
       accounts.
+* [ ] https://github.com/miguelmota/ethereum-development-with-go-book
 * [ ] skaffold profile patch to set replica count
 * [ ] Headless + deployment alternate as per https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 * [ ] consider curl + jq for quorum main image so we can put nodekey in
@@ -592,3 +643,4 @@ TODO:
 ## Article Resources
 
 * Inspired by [k8s for cheap on google cloud](https://dev.to/verkkokauppacom/how-to-kubernetes-for-cheap-on-google-cloud-1aei)
+* Ah, this looks interesting https://medium.com/getamis/sol2proto-694af65ded55 (Contract As A Service - CaaS )

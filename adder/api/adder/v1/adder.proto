@@ -5,31 +5,45 @@ option go_package="github.com/robinbryce/quorum-gcp-preemptible/adder/api/adder/
 
 import "google/api/annotations.proto";
 
-message SetRequest {
-    string value = 1;
+message TransactionHash {
 }
 
-message SetResponse {
-    string value = 1;
+message Transaction {
+    // follows the txdata type from [go-ethereum](https://github.com/ethereum/go-ethereum/blob/master/core/types/transaction.go)
+    // names follow the yellow paper
+    uint64 nonce = 1;
+    bytes gas_price = 2; // big integer
+    uint64 gas = 3;
+    bytes to = 4; // address is 20 bytes
+    bytes value = 5; // big integer
+    bytes payload = 6;
+    bytes v = 7; // big integer
+    bytes r = 8; // big integer
+    bytes s = 9; // big integer
+}
+
+message TransactionResponse {
+    Transaction data = 1;
+    bytes hash = 2; // go-ethereum common.Hash (which is 32 bytes)
+}
+
+message SetRequest {
+    bytes value = 1; // big.Int
 }
 
 message GetRequest {
 }
 
 message GetResponse {
-    string value = 1;
+    bytes value = 1;
 }
 
 message AddRequest {
-    string value = 1;
-}
-
-message AddResponse {
-    string value = 1;
+    bytes value = 1;
 }
 
 service Adder {
-    rpc Set(SetRequest) returns (SetResponse) {
+    rpc Set(SetRequest) returns (TransactionResponse) {
         option (google.api.http) = {
         post: "/quorumpreempt/v1/adder/set"
         body: "*"
@@ -41,7 +55,7 @@ service Adder {
         body: "*"
         };
     }
-    rpc Add(AddRequest) returns (AddResponse) {
+    rpc Add(AddRequest) returns (TransactionResponse) {
         option (google.api.http) = {
         post: "/quorumpreempt/v1/adder/add"
         body: "*"
