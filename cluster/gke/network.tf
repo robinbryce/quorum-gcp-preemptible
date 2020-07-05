@@ -86,3 +86,28 @@ resource "google_compute_firewall" "default" {
   source_ranges = ["0.0.0.0/0"]
   target_tags   = var.node_pools_tags.ingress-pool
 }
+
+resource "google_dns_managed_zone" "preempt" {
+  project = var.project
+  name = "robinbryce-me-zone"
+  dns_name = "robinbryce.me."
+  description = "robin bryce's dns zone"
+}
+
+resource "google_dns_record_set" "a" {
+  name         = "ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"
+  managed_zone = google_dns_managed_zone.preempt.name
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = [google_compute_address.static-ingress.address]
+}
+
+resource "google_dns_record_set" "cname" {
+  name         = "queth.preempt.${google_dns_managed_zone.preempt.dns_name}"
+  managed_zone = google_dns_managed_zone.preempt.name
+  type         = "CNAME"
+  ttl          = 300
+
+  rrdatas = ["queth.preempt.${google_dns_managed_zone.preempt.dns_name}"]
+}

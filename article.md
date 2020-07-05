@@ -597,7 +597,7 @@ CubeDNS + GCP articles point towards in-cluster "self-service" dns
 [Kubernetes dns-pod-service](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/)
 
 firewall rule from reference article only open 80, 443
-# By default, firewall rules restrict cluster master to only initiate TCP connections to nodes on ports 443 (HTTPS) and 10250 (kubelet)
+By default, firewall rules restrict cluster master to only initiate TCP connections to nodes on ports 443 (HTTPS) and 10250 (kubelet)
 
 ## Starting point for Contracts As A Service (CaaS)
 
@@ -619,10 +619,8 @@ k9s port-forward access to the adder pod
 
 use of protset output with [grpcurl](https://github.com/fullstorydev/grpcurl)
 
-    ONE=$(echo "1" | base64)
-
     grpcurl --plaintext -protoset ./adder.protset \
-        -d '{"value":"'$ONE'"}' localhost:9091 adder.v1.Adder.Set
+        -d '{"value":"1"}' localhost:9091 adder.v1.Adder.Set
 
 response is like
 
@@ -640,7 +638,7 @@ response is like
 Get tx hash as hex
 
     grpcurl --plaintext -protoset ./adder.protset \
-        -d '{"value":"'$ONE'"}' localhost:9091 adder.v1.Adder.Add \
+        -d '{"value":"1"}' localhost:9091 adder.v1.Adder.Add \
         | jq -r .hash | base64 -D  | hexdump -v -e '/1 "%02x"'
 
 Get the current value
@@ -649,6 +647,74 @@ Get the current value
         adder.v1.Adder.Get | jq -r .value | base64 -D
     2
 
+## TLS & Lets Encrypt
+
+There are loads of good articles on how to set this up, point at those and
+highlight the specifics of making those other solutions work with our terraform
+cloud & skaffold setup.
+
+[HTTPs with Cert-Manager on GKE](https://medium.com/google-cloud/https-with-cert-manager-on-gke-49a70985d99b)
+
+cert-manager using regular manifests with skaffold. cert-managers docs are
+[here](https://cert-manager.io/docs/installation/kubernetes/)
+
+Add the following skaffold profile ( < k8s 1.15)
+
+  - name: certmanager
+    deploy:
+      kubectl:
+        flags:
+          disableValidation: true
+        manifests:
+        - https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager-legacy.yaml
+
+Use the non legacy variant if the cluster is on >= 1.15 as described [here](https://cert-manager.io/docs/installation/kubernetes/)
+
+Check the deployment using the  test-resources.yaml described on that page. Then run
+
+    kubectl describe certificate -n cert-manager-test
+
+We want to see an event message like this
+
+    Normal  Issued        37s   cert-manager  Certificate issued successfully
+
+Familiarise with Google Cloud DNS [quickstart](https://cloud.google.com/dns/docs/quickstart)
+
+[Sort out a domain](https://cloud.google.com/dns/docs/tutorials/create-domain-tutorial) if
+you don't already have one spare. If you do have one you will need to upate the
+nameservers once we are done creating the managed zone.
+
+Terraform fragments to create the manged zone and A record 
+
+* https://www.terraform.io/docs/providers/google/d/dns_managed_zone.html
+* https://www.terraform.io/docs/providers/google/r/dns_record_set.html
+
+The terraform boils down to
+
+    resource "google_dns_managed_zone" "preempt" {
+      project = var.project
+      name = "example-com-zone"
+      dns_name = "example.com."
+      description = "example dns zone"
+    }
+
+    resource "google_dns_record_set" "a" {
+      name         = "ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"
+      managed_zone = google_dns_managed_zone.preempt.name
+      type         = "A"
+      ttl          = 300
+
+      rrdatas = [google_compute_address.static-ingress.address]
+    }
+
+    resource "google_dns_record_set" "cname" {
+      name         = "queth.preempt.${google_dns_managed_zone.preempt.dns_name}"
+      managed_zone = google_dns_managed_zone.preempt.name
+      type         = "CNAME"
+      ttl          = 300
+
+      rrdatas = ["queth.preempt.${google_dns_managed_zone.preempt.dns_name}"]
+    }
 
 TODO:
 
@@ -660,11 +726,13 @@ TODO:
 * [x] do member add
 * [x] qnodeinit.py init command which does both genesis and nodeinit
 * [x] get/set/add with tx response in api for adder service example
-* [ ] node affinity to spread the dlt nodes around for preempt resilience
+* [ ] tls & cert manager ingress to public ip
 * [x] check depeloyed code (getCode (addr) ) against runtime code
 * [ ] Headless + deployment alternate as per https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 * [ ] follow the pattern from [here](https://github.com/getamis/grpc-contract/blob/master/examples/cmd/server/main.go)
-for contract deployment
+* [ ] node affinity to spread the dlt nodes around for preempt resilience
+for contract deployment (this looks dependent on k8s' 1.18 which is a bit
+fresh)
 * [x] caas example using
   * https://medium.com/getamis/sol2proto-694af65ded55
   * https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7

@@ -77,4 +77,10 @@ profiles:
         manifests:
         - k8s/adder/service.yaml
         - k8s/adder/deployment.yaml
-
+  - name: certmanager
+    deploy:
+      kubectl:
+        flags:
+          disableValidation: true
+        manifests:
+        - https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager-legacy.yaml
