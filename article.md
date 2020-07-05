@@ -662,18 +662,18 @@ TODO:
 * [x] get/set/add with tx response in api for adder service example
 * [ ] node affinity to spread the dlt nodes around for preempt resilience
 * [x] check depeloyed code (getCode (addr) ) against runtime code
+* [ ] Headless + deployment alternate as per https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 * [ ] follow the pattern from [here](https://github.com/getamis/grpc-contract/blob/master/examples/cmd/server/main.go)
 for contract deployment
-* [ ] caas example using
+* [x] caas example using
   * https://medium.com/getamis/sol2proto-694af65ded55
   * https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7
   * https://medium.com/@deeptiman/protobuf-in-hyperledger-fabric-eb674ba9ebd8
-* [ ] premise and outline to marta
+* [x] premise and outline to marta
 * [ ] account convenience script for unlocking and using our genesis funded
       accounts.
 * [ ] https://github.com/miguelmota/ethereum-development-with-go-book
 * [ ] skaffold profile patch to set replica count
-* [ ] Headless + deployment alternate as per https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 * [ ] consider curl + jq for quorum main image so we can put nodekey in
       emptyDir
 * [ ] ? store pods configuration in blob object named after its public key

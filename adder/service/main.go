@@ -2,6 +2,8 @@ package main
 
 // Adapted from helloworld example described here
 // 	https://grpc.io/docs/languages/go/quickstart/
+// And the CaaS example here
+//  https://github.com/getamis/grpc-contract/blob/master/examples/cmd/server/main.go
 
 import (
 	"bytes"
@@ -40,7 +42,6 @@ const (
 	// 700,000,000 and is set by the --miner.gastarget cli switch for geth. We
 	// also want it as big as possible so as to never have to worry about gas.
 	transactionGasLimit = 500000000
-	receiptTimeout      = 15 * time.Second
 	ethRPCTimeout       = 5 * time.Second
 )
 
@@ -50,34 +51,6 @@ type adderService struct {
 	ethc      *ethclient.Client
 	adderAddr common.Address
 	adder     *adder.Adder
-}
-
-func responseFromTransaction(tx *types.Transaction) *v1adder.TransactionResponse {
-
-	log.Printf("tx: %v", tx)
-	if tx == nil {
-		return nil
-	}
-	tr := &v1adder.TransactionResponse{
-		Data: &v1adder.Transaction{},
-	}
-	tr.Data.Nonce = tx.Nonce()
-	tr.Data.GasPrice = tx.GasPrice().Bytes()
-	to := tx.To()
-	if to != nil {
-		tr.Data.To = to.Hex()
-	}
-	tr.Data.Value = tx.Value().Bytes()
-	tr.Data.Payload = tx.Data()
-
-	v, r, s := tx.RawSignatureValues()
-
-	tr.Data.V = v.Bytes()
-	tr.Data.R = r.Bytes()
-	tr.Data.S = s.Bytes()
-
-	tr.Hash = tx.Hash().Hex()
-	return tr
 }
 
 func (a *adderService) Set(
@@ -118,26 +91,40 @@ func (a *adderService) Add(
 	return responseFromTransaction(tx), nil
 }
 
+func responseFromTransaction(tx *types.Transaction) *v1adder.TransactionResponse {
+
+	log.Printf("tx: %v", tx)
+	if tx == nil {
+		return nil
+	}
+	tr := &v1adder.TransactionResponse{
+		Data: &v1adder.Transaction{},
+	}
+	tr.Data.Nonce = tx.Nonce()
+	tr.Data.GasPrice = tx.GasPrice().Bytes()
+	to := tx.To()
+	if to != nil {
+		tr.Data.To = to.Hex()
+	}
+	tr.Data.Value = tx.Value().Bytes()
+	tr.Data.Payload = tx.Data()
+
+	v, r, s := tx.RawSignatureValues()
+
+	tr.Data.V = v.Bytes()
+	tr.Data.R = r.Bytes()
+	tr.Data.S = s.Bytes()
+
+	tr.Hash = tx.Hash().Hex()
+	return tr
+}
+
 func newTransactor(key *ecdsa.PrivateKey) *bind.TransactOpts {
 	auth := bind.NewKeyedTransactor(key)
 
 	auth.Value = big.NewInt(0)                  // in wei
 	auth.GasLimit = uint64(transactionGasLimit) // in units
 	return auth
-}
-
-func (a *adderService) Check(
-	ctx context.Context, req *grpc_health_v1.HealthCheckRequest,
-) (*grpc_health_v1.HealthCheckResponse, error) {
-	log.Println("health check")
-	return &grpc_health_v1.HealthCheckResponse{
-		Status: grpc_health_v1.HealthCheckResponse_SERVING,
-	}, nil
-}
-
-func (a *adderService) Watch(
-	req *grpc_health_v1.HealthCheckRequest, w grpc_health_v1.Health_WatchServer) error {
-	return status.Error(codes.Unimplemented, "Watching is not supported")
 }
 
 func main() {
@@ -163,6 +150,9 @@ func main() {
 
 	log.Printf("PORT: %s, ETH_RPC: %s, WALLET_KEY: %s",
 		listenPort, ethAddressRPC, walletKeyFile)
+	if deployed {
+		log.Printf("CONTRACT_ADDRESS: %s", deployedAddress)
+	}
 
 	server := grpc.NewServer()
 
@@ -244,39 +234,4 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
-}
-
-func (a *adderService) receiptOrFatal(tx *types.Transaction, fatalmsg string) *types.Receipt {
-	var err error
-	var r *types.Receipt
-	var attempt int
-	for {
-		time.Sleep(DefaultBackoff.Duration(attempt))
-		if r, err = receiptWithTimeout(tx, a.ethc); err != nil {
-			attempt++
-			continue
-		}
-		if r == nil {
-			log.Fatalf("%sno receipt and no error", fatalmsg)
-		}
-		if r.Status != 1 {
-			log.Fatalf("%sstatus != 1 for %s", fatalmsg, tx.Hash().Hex())
-		}
-		return r
-	}
-}
-
-type ReceiptCollector interface {
-	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
-}
-
-func receiptWithTimeout(tx *types.Transaction, collector ReceiptCollector) (*types.Receipt, error) {
-	var err error
-	var r *types.Receipt
-	ctx, cancel := context.WithTimeout(context.Background(), receiptTimeout)
-	defer cancel()
-	if r, err = collector.TransactionReceipt(ctx, tx.Hash()); err != nil {
-		return nil, err
-	}
-	return r, nil
 }
