@@ -56,6 +56,8 @@ spec:
             value: http://queth-1.queth:8545
           - name: WALLET_KEY
             value: /service/wallet/key
+          - name: CONTRACT_ADDRESS
+            value: 0xF1cB7d3D991B8C6353cfE18d86159a1EA5049318
         command:
           - /service/adder-service
 

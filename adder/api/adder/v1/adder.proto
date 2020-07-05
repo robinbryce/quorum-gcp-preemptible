@@ -14,7 +14,7 @@ message Transaction {
     uint64 nonce = 1;
     bytes gas_price = 2; // big integer
     uint64 gas = 3;
-    bytes to = 4; // address is 20 bytes
+    string to = 4; // address as EIP 55 40 char hex string
     bytes value = 5; // big integer
     bytes payload = 6;
     bytes v = 7; // big integer
@@ -23,23 +23,23 @@ message Transaction {
 }
 
 message TransactionResponse {
-    Transaction data = 1;
-    bytes hash = 2; // go-ethereum common.Hash (which is 32 bytes)
+    string hash = 1; // go-ethereum common.Hash as hex string (which is 64 chars)
+    Transaction data = 2;
 }
 
 message SetRequest {
-    bytes value = 1; // big.Int
+    uint64  value = 1; // big.Int
 }
 
 message GetRequest {
 }
 
 message GetResponse {
-    bytes value = 1;
+    uint64 value = 1;
 }
 
 message AddRequest {
-    bytes value = 1;
+    uint64 value = 1;
 }
 
 service Adder {

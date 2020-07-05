@@ -4,6 +4,7 @@ package main
 // 	https://grpc.io/docs/languages/go/quickstart/
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
@@ -40,6 +41,7 @@ const (
 	// also want it as big as possible so as to never have to worry about gas.
 	transactionGasLimit = 500000000
 	receiptTimeout      = 15 * time.Second
+	ethRPCTimeout       = 5 * time.Second
 )
 
 type adderService struct {
@@ -63,7 +65,7 @@ func responseFromTransaction(tx *types.Transaction) *v1adder.TransactionResponse
 	tr.Data.GasPrice = tx.GasPrice().Bytes()
 	to := tx.To()
 	if to != nil {
-		tr.Data.To = to.Bytes()
+		tr.Data.To = to.Hex()
 	}
 	tr.Data.Value = tx.Value().Bytes()
 	tr.Data.Payload = tx.Data()
@@ -74,15 +76,15 @@ func responseFromTransaction(tx *types.Transaction) *v1adder.TransactionResponse
 	tr.Data.R = r.Bytes()
 	tr.Data.S = s.Bytes()
 
-	tr.Hash = tx.Hash().Bytes()
+	tr.Hash = tx.Hash().Hex()
 	return tr
 }
 
 func (a *adderService) Set(
 	ctx context.Context, req *v1adder.SetRequest) (*v1adder.TransactionResponse, error) {
 
-	v := big.NewInt(0).SetBytes(req.Value)
-	log.Printf("setting: %v", v)
+	v := big.NewInt(0).SetUint64(req.Value)
+	log.Printf("setting: %v, %v", req, v)
 
 	tx, err := a.adder.Set(a.auth, v)
 	if err != nil {
@@ -99,14 +101,14 @@ func (a *adderService) Get(
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "get: %v", err)
 	}
-	return &v1adder.GetResponse{Value: v.Bytes()}, nil
+	return &v1adder.GetResponse{Value: v.Uint64()}, nil
 }
 
 func (a *adderService) Add(
 	ctx context.Context, req *v1adder.AddRequest) (*v1adder.TransactionResponse, error) {
 
-	v := big.NewInt(0).SetBytes(req.Value)
-	log.Printf("adding: %v", v)
+	v := big.NewInt(0).SetUint64(req.Value)
+	log.Printf("adding: %v, %v", req, v)
 
 	tx, err := a.adder.Add(a.auth, v)
 	if err != nil {
@@ -139,6 +141,7 @@ func (a *adderService) Watch(
 }
 
 func main() {
+
 	var err error
 	log.Printf("starting")
 
@@ -148,6 +151,8 @@ func main() {
 		log.Fatalf("ETH_RPC not provided")
 	}
 
+	deployedAddress, deployed := os.LookupEnv("CONTRACT_ADDRESS")
+
 	// Note: we use this key for contract deployment. This means it needs to be
 	// funded well enough to cover the *estimated* deployment gas cost. The
 	// cost is not deducted from the wallet, but the funds are required.
@@ -155,6 +160,7 @@ func main() {
 	if !ok {
 		log.Fatalf("WALLET_KEY not provided")
 	}
+
 	log.Printf("PORT: %s, ETH_RPC: %s, WALLET_KEY: %s",
 		listenPort, ethAddressRPC, walletKeyFile)
 
@@ -185,14 +191,45 @@ func main() {
 	}
 	a.ethc = ethclient.NewClient(rpcc)
 
-	// Deploy the contract. We do this un-conditionaly everytime the services
-	// starts.
-	var tx *types.Transaction
-	if a.adderAddr, tx, a.adder, err = adder.DeployAdder(a.auth, a.ethc); err != nil {
-		log.Fatalf("deploying contract: %v", err)
+	if !deployed {
+
+		// Deploy the contract. We do this un-conditionaly everytime the services
+		// starts.
+		var tx *types.Transaction
+		if a.adderAddr, tx, a.adder, err = adder.DeployAdder(a.auth, a.ethc); err != nil {
+			log.Fatalf("deploying contract: %v", err)
+		}
+		_ = a.receiptOrFatal(tx, "deploying contract: ")
+		log.Printf("deployed contract: %s", a.adderAddr.Hex())
+
+	} else {
+
+		a.adderAddr = common.HexToAddress(deployedAddress)
+		// Check the code at CONTRACT_ADDRESS matches the runtime code
+		// compiled in to the service binary.
+		ctx, cancel := context.WithTimeout(context.Background(), ethRPCTimeout)
+		defer cancel()
+		var code []byte
+		code, err = a.ethc.CodeAt(ctx, a.adderAddr, nil)
+		if err != nil {
+			log.Fatalf("error checking contract code at `%s': %v", deployedAddress, err)
+		}
+		if len(code) == 0 {
+			log.Fatalf("0 length contract code at `%s'", deployedAddress)
+		}
+
+		if !bytes.Equal(code, common.FromHex(adder.BinRuntime)) {
+
+			log.Fatalf(
+				"contract code at `%s' does not match service contract", deployedAddress)
+		}
+		log.Printf("matched code at `%s'", deployedAddress)
+
+		a.adder, err = adder.NewAdder(a.adderAddr, a.ethc)
+		if err != nil {
+			log.Fatalf("error binding contract code at `%s': %v", deployedAddress, err)
+		}
 	}
-	_ = a.receiptOrFatal(tx, "deploying contract: ")
-	log.Printf("deployed contract: %s", a.adderAddr.Hex())
 
 	// Note that at no point do we import / unlock or otherwise rely on geth
 	// for account management.

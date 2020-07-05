@@ -9,6 +9,7 @@ vars:
   GOPKG_OVERRIDES: ",Mgoogle/protobuf/field_mask.proto=google.golang.org/genproto/protobuf/field_mask"
 
 tasks:
+
   build:
     desc: build the adder service
     env:
@@ -23,19 +24,29 @@ tasks:
         github.com/robinbryce/quorum-gcp-preemptible/adder/proxy
 
     cmds:
-      - mkdir -p abi
       - |
+        mkdir -p abi
         solc \
         --evm-version=constantinople \
         --overwrite \
         --bin --bin-runtime --abi \
         --output-dir ./abi \
         getsetadd.sol
-      - mkdir -p adder
-      - abigen --pkg adder --out adder/adder.go --abi=./abi/Adder.abi --bin=./abi/Adder.bin --type=Adder
-      - mkdir -p bin
-      - cp /etc/ssl/certs/ca-certificates.crt bin
-      - cp /usr/local/bin/grpc_health_probe bin
+      - |
+        mkdir -p adder
+        abigen --pkg adder --out adder/adder.go --abi=./abi/Adder.abi \
+          --bin=./abi/Adder.bin --type=Adder
+      - |
+        cat > ./adder/binruntime.go << EOF
+        // This file is a generated binding and any manual changes will be lost.
+        // +build !codeanalysis"
+        package adder
+        var BinRuntime = \"$(cat ./abi/Adder.bin-runtime)\"
+        EOF
+      - |
+        mkdir -p bin
+        cp /etc/ssl/certs/ca-certificates.crt bin
+        cp /usr/local/bin/grpc_health_probe bin
       - |
         protoc -I. {{.PROTOC_INC}} \
           --go_out=paths=source_relative,plugins=grpc{{.GOPKG_OVERRIDES}}:. \
@@ -44,3 +55,28 @@ tasks:
           --include_imports \
             api/adder/v1/*.proto
       - go install {{.INSTALL_PACKAGES}}
+  get:
+    desc: call adder.v1.Adder.Get on localhost:9091
+    cmds:
+      - |
+        grpcurl --plaintext -protoset ./adder.protset localhost:9091 \
+          adder.v1.Adder.Get | jq -r .value
+    silent: true
+
+  set:
+    desc: call adder.v1.Adder.Set on localhost:9091
+    cmds:
+      - |
+        grpcurl --plaintext -protoset ./adder.protset \
+          -d '{"value":"1"}' localhost:9091 adder.v1.Adder.Set | \
+            jq .
+    silent: true
+  add:
+    desc: call adder.v1.Adder.Add on localhost:9091
+    cmds:
+      - |
+        grpcurl --plaintext -protoset ./adder.protset \
+          -d '{"value":"2"}' localhost:9091 adder.v1.Adder.Add | \
+            jq .
+        # jq -r .hash | base64 -D  | hexdump -v -e '/1 "%02x"'
+    silent: true

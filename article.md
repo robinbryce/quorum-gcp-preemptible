@@ -17,6 +17,10 @@ What can you do with this ? Operate your own CaaS (Contracts As A Service) ala
 By spreading our dlt nodes around a cluster of pre-emptible virtual machines we
 can get a reliable service on top of "cheap" un-reliable resources.
 
+Googles cost planner 
+* £45 PCM 3x n1-standard-2 pre-emptible  (2x vCPU + 7.5 GB RAM)
+* £ 5 PCM 2x f1-micro
+
 ![Costs - 90 days](./costs-90days.png)
 
 ## What - overview
@@ -645,6 +649,7 @@ Get the current value
         adder.v1.Adder.Get | jq -r .value | base64 -D
     2
 
+
 TODO:
 
 * [x] standup vanila pod with pvc
@@ -654,14 +659,15 @@ TODO:
 * [x] sort out node routing ip/dns.
 * [x] do member add
 * [x] qnodeinit.py init command which does both genesis and nodeinit
-* [ ] get/set/add with tx response in api for adder service example
+* [x] get/set/add with tx response in api for adder service example
+* [ ] node affinity to spread the dlt nodes around for preempt resilience
+* [x] check depeloyed code (getCode (addr) ) against runtime code
 * [ ] follow the pattern from [here](https://github.com/getamis/grpc-contract/blob/master/examples/cmd/server/main.go)
 for contract deployment
 * [ ] caas example using
   * https://medium.com/getamis/sol2proto-694af65ded55
   * https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7
   * https://medium.com/@deeptiman/protobuf-in-hyperledger-fabric-eb674ba9ebd8
-* [ ] node affinity to spread the dlt nodes around for preempt resilience
 * [ ] premise and outline to marta
 * [ ] account convenience script for unlocking and using our genesis funded
       accounts.
