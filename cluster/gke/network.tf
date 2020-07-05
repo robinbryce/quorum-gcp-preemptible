@@ -111,5 +111,5 @@ resource "google_dns_record_set" "cname" {
   type         = "CNAME"
   ttl          = 300
 
-  rrdatas = ["queth.preempt.${google_dns_managed_zone.preempt.dns_name}"]
+  rrdatas = ["ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"]
 }
