@@ -54,8 +54,10 @@ resource "google_project_iam_custom_role" "dns01solver" {
   depends_on = [google_project_service.iam]
 
   permissions = [
-    "dns.resourceRecordSets.*",
-    "dns.changes.*",
+    "dns.resourceRecordSets.list",
+    "dns.changes.create",
+    "dns.changes.get",
+    "dns.changes.list",
     "dns.managedZones.list"
   ]
 }
