@@ -95,6 +95,7 @@ resource "google_dns_managed_zone" "preempt" {
 }
 
 resource "google_dns_record_set" "a" {
+  project = var.project
   name         = "ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"
   managed_zone = google_dns_managed_zone.preempt.name
   type         = "A"
@@ -104,6 +105,7 @@ resource "google_dns_record_set" "a" {
 }
 
 resource "google_dns_record_set" "cname" {
+  project = var.project
   name         = "queth.preempt.${google_dns_managed_zone.preempt.dns_name}"
   managed_zone = google_dns_managed_zone.preempt.name
   type         = "CNAME"
