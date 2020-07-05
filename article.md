@@ -650,8 +650,10 @@ Get the current value
 ## TLS & Lets Encrypt
 
 There are loads of good articles on how to set this up, point at those and
-highlight the specifics of making those other solutions work with our terraform
-cloud & skaffold setup.
+highlight the specifics of making those other solutions work with our traeffic,
+terraform cloud & skaffold setup.
+
+[Google Cloud DNS & Cert-Manager][https://cert-manager.io/docs/configuration/acme/dns01/google/]
 
 [HTTPs with Cert-Manager on GKE](https://medium.com/google-cloud/https-with-cert-manager-on-gke-49a70985d99b)
 
@@ -731,8 +733,10 @@ TODO:
 * [ ] Headless + deployment alternate as per https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 * [ ] follow the pattern from [here](https://github.com/getamis/grpc-contract/blob/master/examples/cmd/server/main.go)
 * [ ] node affinity to spread the dlt nodes around for preempt resilience
-for contract deployment (this looks dependent on k8s' 1.18 which is a bit
-fresh)
+      for contract deployment (this looks dependent on k8s' 1.18 which is a bit
+      fresh)
+* [ ] run quorum as daeomon set, with taints to keep them off the ingress. it
+      is a simple way to spread but forces us to have 1 VM per geth node
 * [x] caas example using
   * https://medium.com/getamis/sol2proto-694af65ded55
   * https://medium.com/getamis/grpc-in-dapp-architecture-8c34125356c7

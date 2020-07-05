@@ -6,6 +6,14 @@ module "workload-identity-kubeip" {
   project_id = var.project
 }
 
+module "workload-identity-dns01solver" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  version = "7.3.0"
+  name = "dns01solver-sa"
+  namespace = "cert-manager"
+  project_id = var.project
+}
+
 module "quorum-genesis" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"

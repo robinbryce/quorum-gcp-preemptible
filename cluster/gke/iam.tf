@@ -44,6 +44,39 @@ resource "google_project_iam_member" "iam_member_kluster" {
 }
 
 # -----------------------------------------------------------------------------
+# dns01 challenge account (cert-manager) and role
+# -----------------------------------------------------------------------------
+resource "google_project_iam_custom_role" "dns01solver" {
+  role_id = "dns01solver"
+  title   = "DNS01 Solver Role"
+
+  project    = var.project
+  depends_on = [google_project_service.iam]
+
+  permissions = [
+    "dns.resourceRecordSets.*",
+    "dns.changes.*",
+    "dns.managedZones.list"
+  ]
+}
+
+resource "google_service_account" "dns01solver" {
+  account_id = "dns01solver-serviceaccount"
+  project    = var.project
+  depends_on = [google_project_iam_custom_role.dns01solver]
+}
+
+resource "google_project_iam_member" "dns01solver" {
+
+  depends_on = [google_project_iam_custom_role.dns01solver]
+  project    = var.project
+  role       = "projects/${var.project}/roles/dns01solver"
+  member     = module.workload-identity-dns01solver.gcp_service_account_fqn
+  # member     = "serviceAccount:dns01solver-serviceaccount@${var.project}.iam.gserviceaccount.com"
+  # depends_on = [google_service_account.dns01solver]
+}
+
+# -----------------------------------------------------------------------------
 # kubeip service account and role
 # -----------------------------------------------------------------------------
 resource "google_project_iam_custom_role" "kubeip" {
