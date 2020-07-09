@@ -6,6 +6,22 @@ module "workload-identity-kubeip" {
   project_id = var.project
 }
 
+# Creating k8s namespaces from terraform feels like a layering violation.
+# However, the 'canned' workload identity support needs to create the account
+# or use a pre-existing one. Possibly the right thing is to split off the
+# cluster & networking terraform from the ingresss 'edge', 'iam' and 'service'
+# supporting terraform. Or possibly I should just re-work and customise the
+# workload-identity module. For now, just creating the traefik ns here seems
+# like a reasonable compromise.
+
+resource "kubernetes_namespace" "traefik" {
+  metadata {
+    labels = { name = "traefik" }
+    name = "traefik"
+  }
+}
+
+
 module "workload-identity-dns01solver" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
