@@ -30,6 +30,14 @@ module "workload-identity-dns01solver" {
   project_id = var.project
 }
 
+module "workload-identity-dns01solver2" {
+  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
+  version = "7.3.0"
+  name = "dns01solver2-sa"
+  namespace = "traefik"
+  project_id = var.project
+}
+
 module "quorum-genesis" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"

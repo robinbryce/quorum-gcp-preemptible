@@ -55,6 +55,8 @@ resource "google_project_iam_custom_role" "dns01solver" {
 
   permissions = [
     "dns.resourceRecordSets.list",
+    "dns.resourceRecordSets.update",
+    "dns.resourceRecordSets.delete",
     "dns.changes.create",
     "dns.changes.get",
     "dns.changes.list",
@@ -76,6 +78,22 @@ resource "google_project_iam_member" "dns01solver" {
   member     = module.workload-identity-dns01solver.gcp_service_account_fqn
   # member     = "serviceAccount:dns01solver-serviceaccount@${var.project}.iam.gserviceaccount.com"
   # depends_on = [google_service_account.dns01solver]
+}
+
+resource "google_service_account" "dns01solver2" {
+  account_id = "dns01solver2-serviceaccount"
+  project    = var.project
+  depends_on = [google_project_iam_custom_role.dns01solver]
+}
+
+resource "google_project_iam_member" "dns01solver2" {
+
+  depends_on = [google_project_iam_custom_role.dns01solver]
+  project    = var.project
+  role       = "projects/${var.project}/roles/dns01solver"
+  member     = module.workload-identity-dns01solver2.gcp_service_account_fqn
+  # member     = "serviceAccount:dns01solver2-serviceaccount@${var.project}.iam.gserviceaccount.com"
+  # depends_on = [google_service_account.dns01solver2]
 }
 
 # -----------------------------------------------------------------------------
