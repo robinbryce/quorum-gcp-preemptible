@@ -5,6 +5,20 @@ vars:
   MAX_NODE_IDX: 2
 
 tasks:
+  tls-sa-key:
+    desc: create secret for use with cert-manager (until workload identity is supported)
+    cmds:
+      - |
+        gcloud iam service-accounts keys create \
+          key.json --iam-account dns01solver-sa@quorumpreempt.iam.gserviceaccount.com
+        gcloud projects add-iam-policy-binding quorumpreempt \
+          --member serviceAccount:dns01solver-sa@quorumpreempt.iam.gserviceaccount.com \
+          --role roles/dns.admin
+
+        kubectl -n cert-manager delete secret dns01solver-sa-key || true
+        kubectl -n cert-manager create secret generic dns01solver-sa-key \
+          --from-file key.json
+
   nodekeys:
     desc: ensure all node secrets exist in gcp
     cmds:

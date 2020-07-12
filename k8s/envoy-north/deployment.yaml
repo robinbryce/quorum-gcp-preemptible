@@ -26,17 +26,24 @@ spec:
           key: ingress-pool
           operator: Equal
           value: "true"
+
+      volumes:
+        - name: envoy-conf
+          configMap:
+            name: envoy-conf
       containers:
         - name: envoy-north
           image: envoyproxy/envoy-alpine:v1.15-latest
+          volumeMounts:
+            - name: envoy-conf
+              mountPath: /etc/envoy
           command:
             - "/usr/local/bin/envoy"
           args:
             # may want to set --concurency as detection of 'machine hardware'
             # threads can be odd/wrong in cloud containerised environment.
             - "--config-path /etc/envoy/envoy.yaml"
-            - "--component-log-level upstream:debug,connection:trace"
-            #- "--service-cluster traefik-web|443"
+            #- "--component-log-level upstream:debug,connection:trace"
           ports:
             - containerPort: 80
               protocol: TCP
@@ -49,11 +56,18 @@ spec:
             - containerPort: 9090
               protocol: TCP
               name: admin
-
-          volumeMounts:
-            - name: envoy-conf
-              mountPath: /etc/envoy
-      volumes:
-        - name: envoy-conf
-          configMap:
-            name: envoy-conf
+          livenessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 443
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            tcpSocket:
+              port: 443
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1

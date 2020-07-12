@@ -22,8 +22,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    # - match: Host(`robinbryce.me`) && PathPrefix(`/`)
-    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/`)
+    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/static`)
       kind: Rule
       services:
         - name: nginx-web
@@ -33,3 +32,22 @@ spec:
     #domains:
     #  - main: "*.robinbryce.me"
     #    #sans: "*.robinbryce.me"
+    #
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ingressroutetls
+  namespace: default
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/adder`)
+      kind: Rule
+      services:
+        - name: adder-http1
+          port: 8081
+  tls:
+    certResolver: letsencrypt
+

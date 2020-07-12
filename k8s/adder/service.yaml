@@ -12,3 +12,19 @@ spec:
   selector:
     app.kubernetes.io/name: adder
     app.kubernetes.io/part-of: adder
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adder-http1
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: http-port
+      port: 8081
+      targetPort: 8081
+  selector:
+    app.kubernetes.io/name: adder-http1
+    app.kubernetes.io/part-of: adder-http1
+
