@@ -41,7 +41,7 @@ resource "kubernetes_namespace" "queth" {
 resource "kubernetes_namespace" "caas" {
   metadata {
     labels = { name = "caas" }
-    name = "queth"
+    name = "caas"
   }
 }
 
