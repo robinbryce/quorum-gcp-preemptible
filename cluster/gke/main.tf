@@ -10,10 +10,15 @@ module "workload-identity-kubeip" {
 # However, the 'canned' workload identity support needs to create the account
 # or use a pre-existing one. Possibly the right thing is to split off the
 # cluster & networking terraform from the ingresss 'edge', 'iam' and 'service'
-# supporting terraform. Or possibly I should just re-work and customise the
-# workload-identity module. For now, just creating the traefik ns here seems
-# like a reasonable compromise.
+# supporting terraform. For now we create the namespaces we need to support the
+# desired workload identity distinctions
 
+# traefik - dns01 challenge resolution cloud dns access
+# queth - genesis and dlt network configuration. storage bucket read/write and raft add/remove and reading node keys
+# caas - contracts layer, reading account keys (secrets)
+
+# This namespace gets the identity that can resolve dns challenges. This
+# idenity can create and delete dns records
 resource "kubernetes_namespace" "traefik" {
   metadata {
     labels = { name = "traefik" }
@@ -21,6 +26,24 @@ resource "kubernetes_namespace" "traefik" {
   }
 }
 
+# All the quorum nodes go in here. We don't segregate them further. Any node
+# could potentially do genesis (writing to the storage bucket) and perform raft
+# add/remove. That could be finessed. But this seems enough for a developer
+# oriented setup.
+resource "kubernetes_namespace" "queth" {
+  metadata {
+    labels = { name = "queth" }
+    name = "queth"
+  }
+}
+
+# Can read wallet account keys
+resource "kubernetes_namespace" "caas" {
+  metadata {
+    labels = { name = "caas" }
+    name = "queth"
+  }
+}
 
 module "workload-identity-dns01solver" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
@@ -30,19 +53,11 @@ module "workload-identity-dns01solver" {
   project_id = var.project
 }
 
-module "workload-identity-dns01solver2" {
-  source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
-  version = "7.3.0"
-  name = "dns01solver2-sa"
-  namespace = "traefik"
-  project_id = var.project
-}
-
 module "quorum-genesis" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-genesis-sa"
-  namespace = "default"
+  namespace = "queth"
   project_id = var.project
 }
 
@@ -50,7 +65,7 @@ module "quorum-membership" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-membership-sa"
-  namespace = "default"
+  namespace = "queth"
   project_id = var.project
 }
 
@@ -58,7 +73,7 @@ module "quorum-node" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-node-sa"
-  namespace = "default"
+  namespace = "queth"
   project_id = var.project
 }
 
@@ -66,19 +81,13 @@ module "quorum-client" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/workload-identity"
   version = "7.3.0"
   name = "quorum-client-sa"
-  namespace = "default"
+  namespace = "caas"
   project_id = var.project
 }
 
 provider "google" {
   version     = "3.4.0"
-#  credentials = var.gcp_compute_api_key
 }
-
-#provider "google-beta" {
-#   version     = "3.5.0"
-##   credentials = var.gcp_compute_api_key
-#}
 
 data "google_client_config" "provider" {}
 data "google_container_cluster" "quorumpreempt" {
@@ -161,14 +170,4 @@ resource "google_storage_bucket" "cluster" {
   # location is the 'region' here!
   location = var.region
   storage_class = "STANDARD"
-}
-
-resource "google_storage_bucket" "membership" {
-  provider = google-beta
-  name = "${var.project}-membership.${var.gcp_buckets_tld}"
-  project = var.project
-  # location is the 'region' here!
-  location = var.region
-  storage_class = "STANDARD"
-  default_event_based_hold = true
 }
