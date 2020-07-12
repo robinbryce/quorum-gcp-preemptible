@@ -32,16 +32,16 @@ resource "kubernetes_namespace" "traefik" {
 # oriented setup.
 resource "kubernetes_namespace" "queth" {
   metadata {
-    labels = { name = "queth" }
-    name = "queth"
+    labels = { name = "quethx" }
+    name = "quethx"
   }
 }
 
 # Can read wallet account keys
 resource "kubernetes_namespace" "caas" {
   metadata {
-    labels = { name = "caas" }
-    name = "caas"
+    labels = { name = "caasx" }
+    name = "caasx"
   }
 }
 
