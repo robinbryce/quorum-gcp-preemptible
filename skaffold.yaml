@@ -64,6 +64,14 @@ profiles:
       kubectl:
         manifests:
         - k8s/dnsutils/dnsutils.yaml
+
+  - name: nginx-web
+    deploy:
+      kubectl:
+        manifests:
+        - k8s/nginx-web/namespace.yaml
+        - k8s/nginx-web/deployment.yaml
+        - k8s/nginx-web/service.yaml
   - name: traefik
     deploy:
       kubectl:
@@ -96,3 +104,4 @@ profiles:
         manifests:
         - k8s/adder/service.yaml
         - k8s/adder/deployment.yaml
+        - k8s/adder/deployment-http1.yaml
