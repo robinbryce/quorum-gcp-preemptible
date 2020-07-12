@@ -22,10 +22,14 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: PathPrefix(`/`)
+    # - match: Host(`robinbryce.me`) && PathPrefix(`/`)
+    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/`)
       kind: Rule
       services:
         - name: nginx-web
           port: 80
-  #tls:
-  #  certResolver: letsencrypt
+  tls:
+    certResolver: letsencrypt
+    #domains:
+    #  - main: "*.robinbryce.me"
+    #    #sans: "*.robinbryce.me"

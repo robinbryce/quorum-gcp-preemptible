@@ -44,11 +44,12 @@ deploy:
     - k8s/nginx-web/namespace.yaml
     - k8s/nginx-web/deployment.yaml
     - k8s/nginx-web/service.yaml
-    - k8s/traefik/configmap.yaml
-    - k8s/traefik/namespace.yaml
+    #- k8s/traefik/configmap.yaml
+    #- k8s/traefik/namespace.yaml
+    - k8s/traefik/resource.yaml
     - k8s/traefik/serviceaccount.yaml
     - k8s/traefik/deployment.yaml
-    - k8s/traefik/resource.yaml
+    - k8s/traefik/service.yaml
     - k8s/traefik/route.yaml
     - k8s/queth/genesisconf.yaml
     - k8s/queth/nodeconf.yaml
@@ -63,6 +64,24 @@ profiles:
       kubectl:
         manifests:
         - k8s/dnsutils/dnsutils.yaml
+  - name: traefik
+    deploy:
+      kubectl:
+        manifests:
+        #- k8s/traefik/configmap.yaml
+        #- k8s/traefik/namespace.yaml
+        - k8s/traefik/resource.yaml
+        - k8s/traefik/serviceaccount.yaml
+        - k8s/traefik/deployment.yaml
+        - k8s/traefik/service.yaml
+        - k8s/traefik/route.yaml
+  - name: envoy
+    deploy:
+      kubectl:
+        manifests:
+        - k8s/envoy-north/configmap.yaml
+        - k8s/envoy-north/deployment.yaml
+
   - name: queth
     deploy:
       kubectl:
@@ -77,10 +96,3 @@ profiles:
         manifests:
         - k8s/adder/service.yaml
         - k8s/adder/deployment.yaml
-  - name: certmanager
-    deploy:
-      kubectl:
-        flags:
-          disableValidation: true
-        manifests:
-        - https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager-legacy.yaml

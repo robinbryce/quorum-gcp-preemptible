@@ -13,7 +13,8 @@ spec:
       app.kubernetes.io/name: traefik-web
       app.kubernetes.io/part-of: traefik-web
   strategy:
-    # The taints don't allow > 1 pod to run, so rolling update can't work
+    # The taints don't allow > 1 pod to run, so rolling update can't work. Also
+    # traefik community edition and lets encrypt don't work together if > 1.
     type: Recreate
 
   template:
@@ -22,8 +23,9 @@ spec:
         app.kubernetes.io/name: traefik-web
         app.kubernetes.io/part-of: traefik-web
     spec:
-      serviceAccountName: traefik-sa
-      hostNetwork: true
+      serviceAccountName: dns01solver2-sa
+      automountServiceAccountToken: true
+      # hostNetwork: true
       nodeSelector:
         cloud.google.com/gke-nodepool: ingress-pool
       tolerations:
@@ -31,41 +33,35 @@ spec:
           key: ingress-pool
           operator: Equal
           value: "true"
-      #volumes:
-      #  - name: traefik-config
-      #    configMap:
-      #      name: traefik-config
       containers:
         - name: traefik
           image: "traefik:latest"
-          #volumeMounts:
-          #  - mountPath: "/etc/traefik/config"
-          #    name: traefik-config
           args:
+            - --api.insecure=true
             - --entrypoints.web.address=:80
             - --entrypoints.websecure.address=:443
             - --entrypoints.ping.address=:10254
             - --ping.entrypoint=ping
-            - --log.level=ERROR
+            - --log.level=DEBUG
             - --providers.kubernetescrd
-            #- --certificatesresolvers.letsencrypt.acme.dnschallenge
-            #- --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare
+            - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
+            - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=gcloud
+            - --certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+            - --certificatesresolvers.letsencrypt.acme.email=robinbryce@gmail.com
+            - --certificatesresolvers.letsencrypt.acme.storage=acme-staging.json
           ports:
             - name: web
               containerPort: 80
             - name: websecure
               containerPort: 443
+            - name: admin
+              containerPort: 8080
+
           env:
-          #  - name: "CF_API_EMAIL"
-          #    valueFrom:
-          #      configMapKeyRef:
-          #        key: "CF_API_EMAIL"
-          #        name: "traefik-config"
-          #  - name: "CF_API_KEY"
-          #    valueFrom:
-          #      secretKeyRef:
-          #        name: cloudflare-apikey-secret
-          #        key: apikey
+            #- name: GCE_PROJECT
+            #  value: quorumpreempt
+            #- name: GCE_SERVICE_ACCOUNT
+            #  value: dns01solver2-sa
           livenessProbe:
             failureThreshold: 3
             httpGet:

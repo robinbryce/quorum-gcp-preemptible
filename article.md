@@ -21,6 +21,8 @@ Googles cost planner
 * £45 PCM 3x n1-standard-2 pre-emptible  (2x vCPU + 7.5 GB RAM)
 * £ 5 PCM 2x f1-micro
 
+Cloud Load balancing with 5 forwarding rules and 8 GB of ingress adds £18 PCM
+
 ![Costs - 90 days](./costs-90days.png)
 
 ## What - overview
@@ -88,6 +90,7 @@ auth bootstrapping
 * kubectl deployment needs extra work (or can't handle) dependence on customer
   resource definitions or definition order dependencies
   [order of manifest respected since aug 2019](https://github.com/GoogleContainerTools/skaffold/pull/2729)
+  Use the kustomise deployer
 * --force allows skaffold to replace resource
 * patch
 
@@ -647,40 +650,7 @@ Get the current value
         adder.v1.Adder.Get | jq -r .value | base64 -D
     2
 
-## TLS & Lets Encrypt
-
-There are loads of good articles on how to set this up, point at those and
-highlight the specifics of making those other solutions work with our traeffic,
-terraform cloud & skaffold setup.
-
-[Google Cloud DNS & Cert-Manager][https://cert-manager.io/docs/configuration/acme/dns01/google/]
-
-[HTTPs with Cert-Manager on GKE](https://medium.com/google-cloud/https-with-cert-manager-on-gke-49a70985d99b)
-
-cert-manager using regular manifests with skaffold. cert-managers docs are
-[here](https://cert-manager.io/docs/installation/kubernetes/)
-
-Add the following skaffold profile ( < k8s 1.15)
-
-  - name: certmanager
-    deploy:
-      kubectl:
-        flags:
-          disableValidation: true
-        manifests:
-        - https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager-legacy.yaml
-
-Use the non legacy variant if the cluster is on >= 1.15 as described [here](https://cert-manager.io/docs/installation/kubernetes/)
-
-Check the deployment using the  test-resources.yaml described on that page. Then run
-
-    kubectl describe certificate -n cert-manager-test
-
-We want to see an event message like this
-
-    Normal  Issued        37s   cert-manager  Certificate issued successfully
-
-Familiarise with Google Cloud DNS [quickstart](https://cloud.google.com/dns/docs/quickstart)
+## Cloud DNS, domain name and terraform
 
 [Sort out a domain](https://cloud.google.com/dns/docs/tutorials/create-domain-tutorial) if
 you don't already have one spare. If you do have one you will need to upate the
@@ -718,6 +688,227 @@ The terraform boils down to
       rrdatas = ["queth.preempt.${google_dns_managed_zone.preempt.dns_name}"]
     }
 
+## North/South Envoy+Traefik bridge with TLS & Lets Encrypt
+
+There are loads of good in depth articles on this. Here we just make some
+choices that fit with our goal of a cost and time efficient developer oriented
+deployment.
+
+We go with dns01 challenges from the start. They support wild carded dns and
+are, despite appearances, simpler to arrange.
+
+Traefik can do all the lets encrypt challenges directly. The community instance
+can only do this if we run are running a single instance of Traefik. The
+communinty edition does not support Lets Encrypt in a HA scenario. The EE paid
+version [does](https://containo.us/pricing/). Cert-Manager can be [made to
+work](https://docs.traefik.io/providers/kubernetes-crd/) with the communinty
+edition if both traeffic (free) and HA are desired
+
+Cert-Manager's google cloud dns provider does not support workload identity. It
+requires a secret with a [service account
+key](https://cert-manager.io/docs/configuration/acme/dns01/google/). This is
+precisely what we wanted to move a way from in using workload identity
+
+And finaly, not having cert-manager is one less piece to configure. So we opt
+to stick with the singleton traeffic instance
+
+This [guide](https://docs.traefik.io/user-guides/crd-acme/) is pretty much all
+we need We make one change, we use a service account bound to our workload
+identity. In order to get the access token and client tls cert for kubernetes
+api access to work we *must* set
+
+    automountServiceAccountToken: true
+
+Just after we set
+
+    serviceAccountName: dns01solver-sa
+
+In the deployment.yaml for traefik
+
+For "googleapi: Error 403: Forbidden" errors which fail the challenge. First
+check that the workload idenity is correct. Get a shell on the traffic pod
+using k9s. And then issue
+
+curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience=whatever
+
+Drop the result in to https://jwt.io. Check that the "sub"field matches the
+Unique ID of the service account you are using for the dns01solver. A likely
+problem if workload identity isn't being applied is that it is the identity of
+the default node identity.
+
+Similarly, you can eliminate traefik/lets encrypt config by first checking, in
+the same shell, that you can list the managed zones.
+
+    TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq .access_token -r)
+    curl  -H "Authorization: Bearer $TOKEN" https://dns.googleapis.com/dns/v1/projects/quorumpreempt/managedZones
+
+If this doesn't work from the shel in the workload, no amount of traefik config
+wrangling is going to help. On your development host, if gcloud is setup and
+configured, you can get the bearer token for your owner account with 
+
+    gcloud auth print-access-token
+
+If you then replace TOKEN above with the new one and try again it should work.
+This confirms its a cluster IAM permissions issue
+
+This [issue](https://github.com/jetstack/cert-manager/issues/2069#issuecomment-531428320) appears to be relevant to traefik as it is about google cloud not liking email reuse
+so if there is trial and error, or switching back and forth between
+cert-manager and traefik that issue may be to blame
+
+To further diagnose traefik's namespace and workload identity, create a pod in
+the traefik node space. This will require use of --overrides to work around the
+taints
+
+    kubectl run -it --generator=run-pod/v1 --image google/cloud-sdk:slim \
+        --serviceaccount dns01solver-sa --namespace traefik \
+        --overrides '{"apiVersion":"v1","spec":{"template":{"spec":{"tolerations":[{"effect":"NoExecute","key":"ingress-pool","operator":"Equal","value":"true"}]}}}}' wli-test
+
+At the prompt enter
+
+    gcloud auth print-identity-token
+
+This is the equivelant curl
+
+    curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/identity
+
+The various gcloud tools are now available to help workout what is wrong
+
+So it turns out that workload identity can not work on pods which run on the
+host network
+
+    > Workload Identity can't be used with pods running on the host network.
+    > Request made from these pods to the Metadata APIs will be routed to the
+    > Compute Engine Metadata Server.
+
+And also,
+
+    > The GKE Metadata Server takes a few seconds to start to run on a newly
+    > created pod. Therefore, attempts to authenticate or authorize using
+    > Workload Identity made within the first few seconds of a pod's life may
+    > fail. Retrying the call will resolve the problem.
+
+And our base article configures traefik to bind to the host network as the
+ingress/static ip sans loadbalancer solution. Nuts
+
+    > There's a couple key things in our traefik deployment that sets it apart
+    > from our other deployments. First is [hostNetwork](https://github.com/nkoson/gke-tutorial/blob/master/k8s/traefik/deployment.yaml#L22) which we need for
+    > traefik to listen on network interfaces of its host machine.
+
+Lets review the [GKE/kubip situation](https://blog.doit-intl.com/kubeip-automatically-assign-external-static-ips-to-your-gke-nodes-for-easier-whitelisting-without-2068eb9c14cd)
+
+Some facts:
+
+1. hostNetwork is not compatible with workload identity
+2. traefik can not proxy ssl. it has to terminate it. - ah but
+   [traefik 2 can](https://containo.us/blog/traefik-2-tls-101-23b4fbee81f1/)
+3. cert-manager does not support workload identity direclty
+4. a custom dns solver for cert manager is way to much work look
+   [here](https://github.com/jetstack/cert-manager-webhook-example) if you
+   fancy that. For a HA setup it may be worth the effort
+5. envoy *can* proxy ssl, and as an L3/4 tcp proxy is pretty simple to
+   configure statically.
+6. envoy appears to be significantly more efficient https://containo.us/blog/traefik-2-tls-101-23b4fbee81f1/
+
+Traefik is easy and as we already have it wins on the 'time efficient' front. [tls passthrough](https://containo.us/blog/traefik-2-tls-101-23b4fbee81f1/) (see the end of that article)
+
+But envoy as a 'fancy stunnel' to headless Traefik is quite a compeling idea
+for a simple north/south bridge. So lets try running a lean envoy proxy on a host
+network with ssl pass through and Traefik as the incluster router & tls terminator.
+
+Making our Traefik 'headles' an using envoy with a strict_dns is described at
+[use-envoy-as-loadbalancer-in-kubernetes](https://blog.markvincze.com/how-to-use-envoy-as-a-load-balancer-in-kubernetes/)
+
+A nice backround article on [modern-network-load-balancing](https://blog.envoyproxy.io/introduction-to-modern-network-load-balancing-and-proxying-a57f6ff80236)
+
+The final traefik-web setup is
+
+* [service.yaml](./k8s/traefik/service.yaml)
+* [deployment.yaml](./k8s/traefik/deployment.yaml)
+
+With envoy looking like this
+
+* [envoy-north/configmap.yaml](./k8s/envoy-north/configmap.yaml)
+* [envoy-north/development.yaml](./k8s/envoy-north/development.yaml)
+
+
+## cert-manager
+
+[Google Cloud DNS & Cert-Manager][https://cert-manager.io/docs/configuration/acme/dns01/google/]
+
+[HTTPs with Cert-Manager on GKE](https://medium.com/google-cloud/https-with-cert-manager-on-gke-49a70985d99b)
+
+cert-manager using regular manifests with skaffold. cert-managers docs are
+[here](https://cert-manager.io/docs/installation/kubernetes/)
+
+[cert-manager & kustomize](https://blog.jetstack.io/blog/kustomize-cert-manager/)
+
+Add the following skaffold profile ( < k8s 1.15)
+
+  - name: certmanager
+    deploy:
+      kubectl:
+        flags:
+          disableValidation: true
+        manifests:
+        - https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager-legacy.yaml
+
+Use the non legacy variant if the cluster is on >= 1.15 as described [here](https://cert-manager.io/docs/installation/kubernetes/)
+
+Check the deployment using the  test-resources.yaml described on that page. Then run
+
+    kubectl describe certificate -n cert-manager-test
+
+We want to see an event message like this
+
+    Normal  Issued        37s   cert-manager  Certificate issued successfully
+
+Familiarise with Google Cloud DNS [quickstart](https://cloud.google.com/dns/docs/quickstart)
+
+
+    * [cert-manager Google resolver](https://cert-manager.io/docs/configuration/acme/dns01/google/)
+    * [old sa/key method](https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform)
+    has to be used afaict
+
+To use cert-manager with workload identity, create an [additional api
+token](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)
+with a stable name.
+
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: dns01solver-sa-token
+      namespace: cert-manager
+      annotations:
+        kubernetes.io/service-account.name: dns01solver-sa
+    type: kubernetes.io/service-account-token
+
+Nope: this does not work, falling back to explicit key method. managing via
+task file for now
+
+    gcloud iam service-accounts keys create \
+      key.json --iam-account dns01solver-sa@quorumpreempt.iam.gserviceaccount.com
+    gcloud projects add-iam-policy-binding quorumpreempt \
+      --member serviceAccount:dns01solver-sa@quorumpreempt.iam.gserviceaccount.com \
+      --role roles/dns.admin
+
+    kubectl -n cert-manager delete secret dns01solver-sa-key || true
+    kubectl -n cert-manager create secret generic dns01solver-sa-key \
+      --from-file key.json
+
+But traeffic can do dns01 challenge resolution on its own and uses LEGO so
+maybe we can use the workload identity directly ?
+
+TODO(tls/letsencrypt)
+
+* [ ] do we need to declare the k8s namespaces used by workload identities to
+      terrarform ? seems so. OR if it already exists in the cluster it 'just
+      works'. But without spliting the tf into two, that is a bootstraping
+      issue.
+* [ ] tls & cert manager|traefik ingress to public ip
+* [ ] work out why the custom minimaly privileged role for the dns01 challenge
+      did not work.
+* [ ] what is the correct storage for acme-staging.json 
+
 TODO:
 
 * [x] standup vanila pod with pvc
@@ -728,7 +919,6 @@ TODO:
 * [x] do member add
 * [x] qnodeinit.py init command which does both genesis and nodeinit
 * [x] get/set/add with tx response in api for adder service example
-* [ ] tls & cert manager ingress to public ip
 * [x] check depeloyed code (getCode (addr) ) against runtime code
 * [ ] Headless + deployment alternate as per https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 * [ ] follow the pattern from [here](https://github.com/getamis/grpc-contract/blob/master/examples/cmd/server/main.go)

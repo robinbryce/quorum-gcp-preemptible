@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-web
+  namespace: traefik
+spec:
+  # Let envoy manage the connections, see:
+  # https://blog.markvincze.com/how-to-use-envoy-as-a-load-balancer-in-kubernetes/
+  clusterIP: None
+  selector:
+      app.kubernetes.io/name: traefik-web
+  ports:
+      # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - name: web
+      port: 80
+      targetPort: 80
+    - name: websecure
+      port: 443
+      targetPort: 443
+    - name: admin
+      port: 8080
+      targetPort: 8080

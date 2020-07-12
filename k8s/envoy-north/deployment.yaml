@@ -1,0 +1,59 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  labels:
+    app: envoy-north
+  name: envoy-north
+  namespace: traefik
+spec:
+  replicas: 1
+  strategy:
+    # The taints don't allow > 1 pod to run, so rolling update can't work. Also
+    # traefik community edition and lets encrypt don't work together if > 1.
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: envoy-north
+      name: envoy-north
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        cloud.google.com/gke-nodepool: ingress-pool
+      tolerations:
+        - effect: NoExecute
+          key: ingress-pool
+          operator: Equal
+          value: "true"
+      containers:
+        - name: envoy-north
+          image: envoyproxy/envoy-alpine:v1.15-latest
+          command:
+            - "/usr/local/bin/envoy"
+          args:
+            # may want to set --concurency as detection of 'machine hardware'
+            # threads can be odd/wrong in cloud containerised environment.
+            - "--config-path /etc/envoy/envoy.yaml"
+            - "--component-log-level upstream:debug,connection:trace"
+            #- "--service-cluster traefik-web|443"
+          ports:
+            - containerPort: 80
+              protocol: TCP
+              name: web
+            - containerPort: 443
+              protocol: TCP
+              name: websecure
+              name: envoy-admin
+            # Note: firewal rules only currently expose 80, 443
+            - containerPort: 9090
+              protocol: TCP
+              name: admin
+
+          volumeMounts:
+            - name: envoy-conf
+              mountPath: /etc/envoy
+      volumes:
+        - name: envoy-conf
+          configMap:
+            name: envoy-conf
