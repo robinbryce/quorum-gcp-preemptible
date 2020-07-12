@@ -6,6 +6,9 @@ Stuff that probably isn't worth writing up but which may be a handy reference
 ## Switching it all over from kubectl to kustomize
 
 * [before you use kustomize](https://itnext.io/before-you-use-kustomize-eaa9529cdd19)
+*
+* [following this structure](https://kubectl.docs.kubernetes.io/pages/app_composition_and_deployment/structure_directories.html)
+* [multi tier with composition](https://kubectl.docs.kubernetes.io/pages/app_composition_and_deployment/structure_multi_tier_apps.html)
 
 ## Skaffold gotchas
 
