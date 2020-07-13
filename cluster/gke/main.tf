@@ -18,6 +18,24 @@ provider "kubernetes" {
   )
 }
 
+# cargo culted from https://stackoverflow.com/questions/58232731/kubectl-missing-form-terraform-cloud
+resource "null_resource" "custom" {
+  # change trigger to run every time
+  triggers = {
+    build_number = "${timestamp()}"
+  }
+
+  # download kubectl
+  provisioner "local-exec" {
+    command = "curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl"
+  }
+
+  # run kubectl
+  #provisioner "local-exec" {
+  #  command = "./kubectl apply -f deployment.yaml"
+  #}
+}
+
 # This describes all the workload identities and there respective
 # namespaces
 # 
