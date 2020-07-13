@@ -3,8 +3,6 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: queth
-  labels:
-    app: queth
 spec:
   selector:
     matchLabels:

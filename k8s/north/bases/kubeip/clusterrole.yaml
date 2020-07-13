@@ -3,7 +3,6 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: kubeip-sa
-  namespace: kube-system
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
@@ -20,6 +19,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: kubeip-sa
+    # be explicit, because the GCP SA binding only works for the declared ns
     namespace: kube-system
 roleRef:
   kind: ClusterRole

@@ -49,11 +49,17 @@ profiles:
       kustomize:
         paths:
           - k8s/north/bases
+  - name: caas
+    deploy:
+      kustomize:
+        paths:
+          - k8s/caas/bases
   - name: ledger
     deploy:
       kustomize:
         paths:
-          - k8s/north/bases
+          - k8s/ledger/bases
+
 
   - name: dnsutils
     deploy:

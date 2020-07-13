@@ -17,5 +17,3 @@ spec:
   clusterIP: None
   selector:
     app: queth
-    #app.kubernetes.io/name: queth
-    #app.kubernetes.io/part-of: queth

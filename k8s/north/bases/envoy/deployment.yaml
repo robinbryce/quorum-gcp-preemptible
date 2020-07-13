@@ -2,20 +2,18 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   labels:
-    app: envoy-north
-  name: envoy-north
-  namespace: traefik
+    app: envoy-lb
+  name: envoy-lb
 spec:
   replicas: 1
   strategy:
-    # The taints don't allow > 1 pod to run, so rolling update can't work. Also
-    # traefik community edition and lets encrypt don't work together if > 1.
+    # The taints don't allow > 1 pod to run, so rolling update can't work.
     type: Recreate
   template:
     metadata:
       labels:
-        app: envoy-north
-      name: envoy-north
+        app: envoy-lb
+      name: envoy-lb
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -32,7 +30,7 @@ spec:
           configMap:
             name: envoy-conf
       containers:
-        - name: envoy-north
+        - name: envoy-lb
           image: envoyproxy/envoy-alpine:v1.15-latest
           volumeMounts:
             - name: envoy-conf

@@ -28,6 +28,8 @@ spec:
           value: adder:9091
         - name: PORT
           value: "8081"
+        - name: HOST
+          value: "adder-http1"
 
         command:
         - /service/adder-proxy

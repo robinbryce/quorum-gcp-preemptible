@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nginx-web
-  namespace: nginx-web
   labels:
     app.kubernetes.io/name: nginx-web
     app.kubernetes.io/part-of: nginx-web

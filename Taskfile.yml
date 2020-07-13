@@ -5,6 +5,21 @@ vars:
   MAX_NODE_IDX: 2
 
 tasks:
+  deploy-crds:
+    desc: re-deploy custom resource definitions if they have changed (skaffold & kubectl etal are not able to do this)
+    cmds:
+      - kubectl apply -f k8s/north/bases/traefik/resource.yaml
+      - touch k8s/north/bases/traefik/crd-deployed
+    sources:
+      - k8s/north/bases/traefik/resource.yaml
+    generates:
+      - k8s/north/bases/traefik/crd-deployed
+  deploy:
+    deps: [deploy-crds]
+    desc: deploy (and build if necessary)
+    cmds:
+      - skaffold run
+
   tls-sa-key:
     desc: create secret for use with cert-manager (until workload identity is supported)
     cmds:

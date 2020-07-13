@@ -17,7 +17,7 @@ spec:
         app.kubernetes.io/name: adder
         app.kubernetes.io/part-of: adder
     spec:
-      serviceAccountName: quorum-node-sa
+      serviceAccountName: quorum-client-sa
       volumes:
       - name: wallet
         emptyDir: {}

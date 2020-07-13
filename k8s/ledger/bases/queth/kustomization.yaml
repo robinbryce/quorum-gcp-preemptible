@@ -1,11 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: default
+namespace: queth
 commonLabels:
   # https://github.com/GoogleContainerTools/skaffold/issues/3219
   skaffold.dev/run-id: static
   app.kubernetes.io/managed-by: skaffold
 resources:
+  - namespace.yaml
+  - serviceaccount.yaml
   - genesisconf.yaml
   - nodeconf.yaml
   - service.yaml

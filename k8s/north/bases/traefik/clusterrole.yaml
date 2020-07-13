@@ -56,4 +56,5 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: dns01solver2-sa
+    # be explicit, because the GCP SA binding only works for the declared ns
     namespace: traefik

@@ -2,7 +2,6 @@ apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
   name: simpleingressroute
-  namespace: nginx-web
 spec:
   entryPoints:
     - web
@@ -17,7 +16,6 @@ apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
   name: ingressroutetls
-  namespace: nginx-web
 spec:
   entryPoints:
     - websecure
@@ -27,27 +25,15 @@ spec:
       services:
         - name: nginx-web
           port: 80
+    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/adder`)
+      kind: Rule
+      services:
+        - name: adder-http1
+          port: 8081
+
   tls:
     certResolver: letsencrypt
     #domains:
     #  - main: "*.robinbryce.me"
     #    #sans: "*.robinbryce.me"
     #
----
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: ingressroutetls
-  namespace: default
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/adder`)
-      kind: Rule
-      services:
-        - name: adder-http1
-          port: 8081
-  tls:
-    certResolver: letsencrypt
-
