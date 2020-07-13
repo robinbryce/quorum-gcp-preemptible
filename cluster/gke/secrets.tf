@@ -49,5 +49,5 @@ resource "google_secret_manager_secret_iam_member" "qnode-wallet" {
     ])
   secret_id = each.key
   role = "roles/secretmanager.secretAccessor"
-  member = module.quorum-node.gcp_service_account_fqn
+  member = module.quorum-client.gcp_service_account_fqn
 }
