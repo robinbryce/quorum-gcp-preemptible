@@ -46,85 +46,85 @@ resource "google_project_iam_member" "iam_member_kluster" {
 # -----------------------------------------------------------------------------
 # dns01 challenge account (cert-manager) and role
 # -----------------------------------------------------------------------------
-resource "google_project_iam_custom_role" "dns01solver" {
-  role_id = "dns01solver"
-  title   = "DNS01 Solver Role"
-
-  project    = var.project
-  depends_on = [google_project_service.iam]
-
-  permissions = [
-    "dns.resourceRecordSets.create",
-    "dns.resourceRecordSets.update",
-    # removing delete doesn't fail the challenge but leaves the TXT record
-    # hanging around - which can be useful for debugging
-    "dns.resourceRecordSets.delete",
-    "dns.resourceRecordSets.list",
-    "dns.changes.create",
-    "dns.changes.get",
-    "dns.changes.list",
-    "dns.managedZones.list"
-  ]
-}
-
-resource "google_service_account" "dns01solver" {
-  account_id = "dns01solver-serviceaccount"
-  project    = var.project
-  depends_on = [google_project_iam_custom_role.dns01solver]
-}
-
-resource "google_project_iam_member" "dns01solver" {
-
-  depends_on = [google_project_iam_custom_role.dns01solver]
-  project    = var.project
-  role       = "projects/${var.project}/roles/dns01solver"
-  member     = module.workload-identity-dns01solver.gcp_service_account_fqn
-  # member     = "serviceAccount:dns01solver-serviceaccount@${var.project}.iam.gserviceaccount.com"
-  # depends_on = [google_service_account.dns01solver]
-}
+#resource "google_project_iam_custom_role" "dns01solver" {
+#  role_id = "dns01solver"
+#  title   = "DNS01 Solver Role"
+#
+#  project    = var.project
+#  depends_on = [google_project_service.iam]
+#
+#  permissions = [
+#    "dns.resourceRecordSets.create",
+#    "dns.resourceRecordSets.update",
+#    # removing delete doesn't fail the challenge but leaves the TXT record
+#    # hanging around - which can be useful for debugging
+#    "dns.resourceRecordSets.delete",
+#    "dns.resourceRecordSets.list",
+#    "dns.changes.create",
+#    "dns.changes.get",
+#    "dns.changes.list",
+#    "dns.managedZones.list"
+#  ]
+#}
+#
+#resource "google_service_account" "dns01solver" {
+#  account_id = "dns01solver-serviceaccount"
+#  project    = var.project
+#  depends_on = [google_project_iam_custom_role.dns01solver]
+#}
+#
+#resource "google_project_iam_member" "dns01solver" {
+#
+#  depends_on = [google_project_iam_custom_role.dns01solver]
+#  project    = var.project
+#  role       = "projects/${var.project}/roles/dns01solver"
+#  member     = module.workload-identity-dns01solver.gcp_service_account_fqn
+#  # member     = "serviceAccount:dns01solver-serviceaccount@${var.project}.iam.gserviceaccount.com"
+#  # depends_on = [google_service_account.dns01solver]
+#}
 
 
 # -----------------------------------------------------------------------------
 # kubeip service account and role
 # -----------------------------------------------------------------------------
-resource "google_project_iam_custom_role" "kubeip" {
-  role_id = "kubeip"
-  title   = "kubeip Role"
-
-  project    = var.project
-  depends_on = [google_project_service.iam]
-
-
-  permissions = [
-    "compute.addresses.list",
-    "compute.instances.addAccessConfig", "compute.instances.deleteAccessConfig",
-    "compute.instances.get",
-    "compute.instances.list",
-    "compute.projects.get",
-    "container.clusters.get",
-    "container.clusters.list",
-    "resourcemanager.projects.get",
-    "compute.networks.useExternalIp",
-    "compute.subnetworks.useExternalIp",
-    "compute.addresses.use",
-  ]
-}
-
-resource "google_service_account" "kubeip" {
-  account_id = "kubeip-serviceaccount"
-  project    = var.project
-  depends_on = [google_project_iam_custom_role.kubeip]
-}
-
-resource "google_project_iam_member" "iam_member_kubeip" {
-
-  depends_on = [google_project_iam_custom_role.kubeip]
-  project    = var.project
-  role       = "projects/${var.project}/roles/kubeip"
-  member     = module.workload-identity-kubeip.gcp_service_account_fqn
-  # member     = "serviceAccount:kubeip-serviceaccount@${var.project}.iam.gserviceaccount.com"
-  # depends_on = [google_service_account.kubeip]
-}
+#resource "google_project_iam_custom_role" "kubeip" {
+#  role_id = "kubeip"
+#  title   = "kubeip Role"
+#
+#  project    = var.project
+#  depends_on = [google_project_service.iam]
+#
+#
+#  permissions = [
+#    "compute.addresses.list",
+#    "compute.instances.addAccessConfig", "compute.instances.deleteAccessConfig",
+#    "compute.instances.get",
+#    "compute.instances.list",
+#    "compute.projects.get",
+#    "container.clusters.get",
+#    "container.clusters.list",
+#    "resourcemanager.projects.get",
+#    "compute.networks.useExternalIp",
+#    "compute.subnetworks.useExternalIp",
+#    "compute.addresses.use",
+#  ]
+#}
+#
+#resource "google_service_account" "kubeip" {
+#  account_id = "kubeip-serviceaccount"
+#  project    = var.project
+#  depends_on = [google_project_iam_custom_role.kubeip]
+#}
+#
+#resource "google_project_iam_member" "iam_member_kubeip" {
+#
+#  depends_on = [google_project_iam_custom_role.kubeip]
+#  project    = var.project
+#  role       = "projects/${var.project}/roles/kubeip"
+#  member     = module.workload-identity-kubeip.gcp_service_account_fqn
+#  # member     = "serviceAccount:kubeip-serviceaccount@${var.project}.iam.gserviceaccount.com"
+#  # depends_on = [google_service_account.kubeip]
+#}
 
 # -----------------------------------------------------------------------------
 # cluster storage bucket iam bindings
