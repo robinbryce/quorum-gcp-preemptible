@@ -33,33 +33,33 @@ provider "kubernetes" {
 # * queth - genesis and dlt network configuration. storage bucket read/write and raft add/remove and reading node keys
 # * caas - contracts layer, reading account keys (secrets)
 
-# This namespace gets the identity that can resolve dns challenges. This
-# idenity can create and delete dns records
-resource "kubernetes_namespace" "traefik" {
-  metadata {
-    labels = { name = "traefik" }
-    name = "traefik"
-  }
-}
-
-# All the quorum nodes go in here. We don't segregate them further. Any node
-# could potentially do genesis (writing to the storage bucket) and perform raft
-# add/remove. That could be finessed. But this seems enough for a developer
-# oriented setup.
-resource "kubernetes_namespace" "queth" {
-  metadata {
-    labels = { name = "queth" }
-    name = "queth"
-  }
-}
-
-# Can read wallet account keys
-resource "kubernetes_namespace" "caas" {
-  metadata {
-    labels = { name = "caas" }
-    name = "caas"
-  }
-}
+## This namespace gets the identity that can resolve dns challenges. This
+## idenity can create and delete dns records
+#resource "kubernetes_namespace" "traefik" {
+#  metadata {
+#    labels = { name = "traefik" }
+#    name = "traefik"
+#  }
+#}
+#
+## All the quorum nodes go in here. We don't segregate them further. Any node
+## could potentially do genesis (writing to the storage bucket) and perform raft
+## add/remove. That could be finessed. But this seems enough for a developer
+## oriented setup.
+#resource "kubernetes_namespace" "queth" {
+#  metadata {
+#    labels = { name = "queth" }
+#    name = "queth"
+#  }
+#}
+#
+## Can read wallet account keys
+#resource "kubernetes_namespace" "caas" {
+#  metadata {
+#    labels = { name = "caas" }
+#    name = "caas"
+#  }
+#}
 
 # It seems these modules can *only* be defined in main
 module "workload-identity-kubeip" {
