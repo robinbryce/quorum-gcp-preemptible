@@ -21,33 +21,33 @@ resource "google_secret_manager_secret" "qnode" {
 }
 
 # google_secret_manager_secret.qnode["qnode-0-enode"]: Refreshing state... [id=projects/quorumpreempt/secrets/qnode-0-enode]
-resource "google_secret_manager_secret_iam_member" "qnode-key" {
-  project = var.project
-  count = var.max_quorum_nodes
-  provider           = google-beta
-  secret_id = google_secret_manager_secret.qnode["qnode-${count.index}-key"].secret_id
-  role = "roles/secretmanager.secretAccessor"
-  member = module.quorum-node.gcp_service_account_fqn
-}
+#resource "google_secret_manager_secret_iam_member" "qnode-key" {
+#  project = var.project
+#  count = var.max_quorum_nodes
+#  provider           = google-beta
+#  secret_id = google_secret_manager_secret.qnode["qnode-${count.index}-key"].secret_id
+#  role = "roles/secretmanager.secretAccessor"
+#  member = module.quorum-node.gcp_service_account_fqn
+#}
 
-resource "google_secret_manager_secret_iam_member" "qnode-enode" {
-  project = var.project
-  count = var.max_quorum_nodes
-  provider           = google-beta
-  secret_id = google_secret_manager_secret.qnode["qnode-${count.index}-enode"].secret_id
-  role = "roles/secretmanager.secretAccessor"
-  member = module.quorum-node.gcp_service_account_fqn
-}
+#resource "google_secret_manager_secret_iam_member" "qnode-enode" {
+#  project = var.project
+#  count = var.max_quorum_nodes
+#  provider           = google-beta
+#  secret_id = google_secret_manager_secret.qnode["qnode-${count.index}-enode"].secret_id
+#  role = "roles/secretmanager.secretAccessor"
+#  member = module.quorum-node.gcp_service_account_fqn
+#}
 
-resource "google_secret_manager_secret_iam_member" "qnode-wallet" {
-  project = var.project
-  provider           = google-beta
-  for_each = toset([
-    "qnode-0-wallet-address", "qnode-0-wallet-key", "qnode-0-wallet-password",
-    "qnode-1-wallet-address", "qnode-1-wallet-key", "qnode-1-wallet-password",
-    "qnode-2-wallet-address", "qnode-2-wallet-key", "qnode-2-wallet-password"
-    ])
-  secret_id = each.key
-  role = "roles/secretmanager.secretAccessor"
-  member = module.quorum-node.gcp_service_account_fqn
-}
+#resource "google_secret_manager_secret_iam_member" "qnode-wallet" {
+#  project = var.project
+#  provider           = google-beta
+#  for_each = toset([
+#    "qnode-0-wallet-address", "qnode-0-wallet-key", "qnode-0-wallet-password",
+#    "qnode-1-wallet-address", "qnode-1-wallet-key", "qnode-1-wallet-password",
+#    "qnode-2-wallet-address", "qnode-2-wallet-key", "qnode-2-wallet-password"
+#    ])
+#  secret_id = each.key
+#  role = "roles/secretmanager.secretAccessor"
+#  member = module.quorum-node.gcp_service_account_fqn
+#}

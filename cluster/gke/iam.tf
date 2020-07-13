@@ -141,19 +141,19 @@ resource "google_project_iam_member" "iam_member_kubeip" {
 # * binding - sets *all* members (discarding previous) for a particular role.
 #   After application, any previous members are dropped. no other (previous) members 
 # * member - not authorative (additive)
-resource "google_storage_bucket_iam_member" "cluster_bucket_quorum_members" {
-  # TODO: configure this in module "cluster" like we do for the node pools
-  for_each = {
-    genesis_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-genesis.gcp_service_account_fqn}"]
-    genesis_objectview = ["roles/storage.objectViewer", "${module.quorum-genesis.gcp_service_account_fqn}"]
-    membership_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-membership.gcp_service_account_fqn}"]
-    membership_objectview = ["roles/storage.objectViewer", "${module.quorum-membership.gcp_service_account_fqn}"]
-    node_objecadmin = ["roles/storage.objectAdmin", "${module.quorum-node.gcp_service_account_fqn}"]
-    node_objectview = ["roles/storage.objectViewer", "${module.quorum-node.gcp_service_account_fqn}"]
-    client_objectview = ["roles/storage.objectViewer", "${module.quorum-client.gcp_service_account_fqn}"]
-  }
-  bucket = google_storage_bucket.cluster.name
-  role = each.value[0]
-  member = each.value[1]
-}
+#resource "google_storage_bucket_iam_member" "cluster_bucket_quorum_members" {
+#  # TODO: configure this in module "cluster" like we do for the node pools
+#  for_each = {
+#    genesis_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-genesis.gcp_service_account_fqn}"]
+#    genesis_objectview = ["roles/storage.objectViewer", "${module.quorum-genesis.gcp_service_account_fqn}"]
+#    membership_objectadmin = ["roles/storage.objectAdmin", "${module.quorum-membership.gcp_service_account_fqn}"]
+#    membership_objectview = ["roles/storage.objectViewer", "${module.quorum-membership.gcp_service_account_fqn}"]
+#    node_objecadmin = ["roles/storage.objectAdmin", "${module.quorum-node.gcp_service_account_fqn}"]
+#    node_objectview = ["roles/storage.objectViewer", "${module.quorum-node.gcp_service_account_fqn}"]
+#    client_objectview = ["roles/storage.objectViewer", "${module.quorum-client.gcp_service_account_fqn}"]
+#  }
+#  bucket = google_storage_bucket.cluster.name
+#  role = each.value[0]
+#  member = each.value[1]
+#}
 # iam for secrets in secrets.tf
