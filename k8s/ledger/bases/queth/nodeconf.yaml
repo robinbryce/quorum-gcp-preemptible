@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: queth-nodeconfig
   labels:
-    app.kubernetes.io/name: queth
+    app.kubernetes.io/name: queth-nodeconfig
     app.kubernetes.io/part-of: queth
 
-  name: queth-nodeconfig
 data:
   nodeconf.json: |-
     {

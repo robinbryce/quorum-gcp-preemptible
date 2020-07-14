@@ -3,20 +3,19 @@ kind: Deployment
 metadata:
   name: adder
   labels:
-    app.kubernetes.io/name: adder
-    app.kubernetes.io/part-of: adder
+    app: adder
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: adder
-      app.kubernetes.io/part-of: adder
+      app: adder
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: adder
-        app.kubernetes.io/part-of: adder
+        app: adder
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: work-pool
       serviceAccountName: quorum-client-sa
       volumes:
       - name: wallet
@@ -53,11 +52,11 @@ spec:
           - name: PORT
             value: "9091"
           - name: ETH_RPC
-            value: http://queth-1.queth:8545
+            value: http://node-1.queth.queth:8545
           - name: WALLET_KEY
             value: /service/wallet/key
-          - name: CONTRACT_ADDRESS
-            value: 0xF1cB7d3D991B8C6353cfE18d86159a1EA5049318
+          #- name: CONTRACT_ADDRESS
+          #  value: 0x2976ab0117675374E65B50179A224aE7d7599ce3
         command:
           - /service/adder-service
 

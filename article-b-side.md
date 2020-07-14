@@ -9,9 +9,17 @@ Stuff that probably isn't worth writing up but which may be a handy reference
 *
 * [following this structure](https://kubectl.docs.kubernetes.io/pages/app_composition_and_deployment/structure_directories.html)
 * [multi tier with composition](https://kubectl.docs.kubernetes.io/pages/app_composition_and_deployment/structure_multi_tier_apps.html)
+* run-id and label conflicts sometimes require force or overriding lables to
+    avoid the conflicts
+  # https://github.com/GoogleContainerTools/skaffold/issues/3219
+  queth
+  skaffold.dev/run-id: static
+  app.kubernetes.io/managed-by: skaffold
+
 
 ## Skaffold gotchas
 
+* 
 * default setup almost just works. traefik taints only permit one instance so the
   replacement is stuck pending until the old instance is manually deleted.
 * kubectl deployment needs extra work (or can't handle) dependence on customer

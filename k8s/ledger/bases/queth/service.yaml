@@ -4,6 +4,9 @@ metadata:
   name: queth
   labels:
     app: queth
+    app.kubernetes.io/name: queth
+    app.kubernetes.io/part-of: queth
+
 spec:
   ports:
   - name: tcp-peer

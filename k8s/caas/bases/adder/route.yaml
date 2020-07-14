@@ -1,0 +1,19 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ingressroutetls
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/adder`)
+      kind: Rule
+      services:
+        - name: adder-http1
+          port: 8081
+  tls:
+    certResolver: letsencrypt
+    #domains:
+    #  - main: "*.robinbryce.me"
+    #    #sans: "*.robinbryce.me"
+    #

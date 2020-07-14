@@ -3,33 +3,30 @@ kind: Deployment
 metadata:
   name: adder-http1
   labels:
-    app.kubernetes.io/name: adder-http1
-    app.kubernetes.io/part-of: adder-http1
+    app: adder-http1
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: adder-http1
-      app.kubernetes.io/part-of: adder-http1
+      app: adder-http1
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: adder-http1
-        app.kubernetes.io/part-of: adder-http1
+        app: adder-http1
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: work-pool
       containers:
       - name: "adder"
         image: eu.gcr.io/quorumpreempt/adder
         ports:
-        - name: http-port
-          containerPort: 8081
+          - name: http-port
+            containerPort: 8081
         env:
         - name: SERVICE_ENDPOINT
           value: adder:9091
         - name: PORT
           value: "8081"
-        - name: HOST
-          value: "adder-http1"
 
         command:
         - /service/adder-proxy

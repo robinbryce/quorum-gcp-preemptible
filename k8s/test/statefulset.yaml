@@ -1,0 +1,27 @@
+# See https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ss
+  labels:
+    app: test
+spec:
+  selector:
+    matchLabels:
+      app: test
+      # Label selector that determines which Pods belong to the StatefulSet
+      # Must match spec: template: metadata: labels
+  serviceName: test
+  replicas: 2  # default nodes per deployments (1 is fine)
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      terminationGracePeriodSeconds: 2
+      containers:
+      - name: nginx
+        image: k8s.gcr.io/nginx-slim:0.8
+        ports:
+        - name: web
+          containerPort: 80

@@ -1,9 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: default
+namespace: caas
 resources:
   - namespace.yaml
   - serviceaccount.yaml
   - deployment.yaml
-  - deployment-http1.yaml
   - service.yaml
+  - deployment-http1.yaml
+  - service-http1.yaml
+  - route.yaml

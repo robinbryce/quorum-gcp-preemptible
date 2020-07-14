@@ -2,6 +2,17 @@ apiVersion: skaffold/v2beta5
 kind: Config
 metadata:
   name: quorum-gcp-preemptible
+
+deploy:
+  kustomize:
+    paths:
+      - k8s/ledger/bases
+      - k8s/north/bases
+      - k8s/caas/bases
+  kubectl:
+    manifests:
+      - k8s/dnsutils/dnsutils.yaml
+
 build:
   artifacts:
   - image: eu.gcr.io/quorumpreempt/adder-builder
@@ -35,34 +46,4 @@ build:
       dockerfile:
         Dockerfile
 
-deploy:
-  kustomize:
-    paths:
-      - k8s/ledger/bases
-      - k8s/caas/bases
-      - k8s/north/bases
 
-profiles:
-
-  - name: north
-    deploy:
-      kustomize:
-        paths:
-          - k8s/north/bases
-  - name: caas
-    deploy:
-      kustomize:
-        paths:
-          - k8s/caas/bases
-  - name: ledger
-    deploy:
-      kustomize:
-        paths:
-          - k8s/ledger/bases
-
-
-  - name: dnsutils
-    deploy:
-      kubectl:
-        manifests:
-        - k8s/dnsutils/dnsutils.yaml
