@@ -39,6 +39,9 @@ resource "google_secret_manager_secret_iam_member" "qnode-enode" {
   member = module.quorum-node.gcp_service_account_fqn
 }
 
+# managing these as secrets is more convenient for some things and not for
+# others. wallet address are not sensitive at all, but doing it this way avoids
+# having to stash them in resources we haven't created yet.
 resource "google_secret_manager_secret_iam_member" "qnode-wallet" {
   project = var.project
   provider           = google-beta
@@ -50,4 +53,19 @@ resource "google_secret_manager_secret_iam_member" "qnode-wallet" {
   secret_id = each.key
   role = "roles/secretmanager.secretAccessor"
   member = module.quorum-client.gcp_service_account_fqn
+}
+
+# genesis puts wallet address in the genesis config. its easiest if it reads
+# them direct from secretmanager.
+resource "google_secret_manager_secret_iam_member" "qnode-wallet-addresses" {
+  project = var.project
+  provider           = google-beta
+  for_each = toset([
+    "qnode-0-wallet-address",
+    "qnode-1-wallet-address",
+    "qnode-2-wallet-address"
+    ])
+  secret_id = each.key
+  role = "roles/secretmanager.secretAccessor"
+  member = module.quorum-node.gcp_service_account_fqn
 }
