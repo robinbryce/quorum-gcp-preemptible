@@ -5,6 +5,10 @@ provider "google" {
   #zone = var.zone
 }
 
+provider "kubernetes" {
+  load_config_file = "false"
+}
+
 data "google_client_config" "provider" {}
 data "google_container_cluster" "quorumpreempt" {
   name = var.cluster_name
