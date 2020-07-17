@@ -1,5 +1,8 @@
 provider "google" {
   version     = "3.4.0"
+  project = var.project
+  region = var.region
+  zone = var.zone
 }
 
 data "google_client_config" "provider" {}

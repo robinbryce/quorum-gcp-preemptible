@@ -2,6 +2,10 @@ variable "project" {
   type = string
 }
 
+variable "zone" {
+  type = string
+}
+
 # pre-create resources for this many nodes (where those resources are cheap or free)
 variable "max_quorum_nodes" {
   type = number

@@ -1,17 +1,21 @@
 locals {
   project = "ledger-2"
+  region = "europe-west2"
+  zone = "europe-west2-a"
   max_quorum_nodes = 3
 }
 
 module "cluster" {
 
-  project                             = local.project
+  #project                             = local.project
+  project                             = "ledger-2"
   max_quorum_nodes                    = local.max_quorum_nodes
   gcp_project_id                      = local.project
   gcp_buckets_tld                     = "g.buckets.thaumagen.com"
   source                              = "./gke"
   region                              = "europe-west2"
   location                            = "europe-west2-a"
+  zone                                = "europe-west2-a"
   cluster_name                        = "kluster"
   cluster_range_name                  = "gke-pods"
   services_range_name                 = "gke-services"
