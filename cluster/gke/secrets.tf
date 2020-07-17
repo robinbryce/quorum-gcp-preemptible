@@ -20,7 +20,6 @@ resource "google_secret_manager_secret" "qnode" {
   }
 }
 
-# google_secret_manager_secret.qnode["qnode-0-enode"]: Refreshing state... [id=projects/quorumpreempt/secrets/qnode-0-enode]
 resource "google_secret_manager_secret_iam_member" "qnode-key" {
   project = var.project
   count = var.max_quorum_nodes

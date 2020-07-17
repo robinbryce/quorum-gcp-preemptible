@@ -65,10 +65,69 @@ Cloud Load balancing with 5 forwarding rules and 8 GB of ingress adds £18 PCM
 * use traeffic with workload idenity and lets encrypt to provide tls 'out of the box'
 * use strategy 'replace' for traeffic - rolling update can't possible work with how the node taints are setup
 
-## How to stand up the cluster - fast
+## How to stand up the cluster
+
+* Create an empty GCP project, set the project id explicitly if you want it to
+  match the project name
+* Enable the compute engine api
+* Enable the service usage api (it may be by default)
+* Enable Cloud DNS api
+* Enable
+
+All can be found at APIs & Services / API Library
+
+Create an access key for terraform cloud
+
+IAM & Admin / Service Accounts Compute Engine Default Service account -> create
+key -> create as json
+
+Grant permission to the default compute engine service account for creating iam
+roles and asigning policies
+
+IAM & Admin edit compute engine default sa
+Add another role -> Role Administrator, Project IAM Admin, Service Account Admin
+(pen icon to right)
+
+Create a terraform io account or login
+
+For the repository for this project.
+[if changed default] update the project name in the cluster/cluster.tf
+
+Add GOOGLE_CLOUD_KEYFILE_JSON as an environment variable
+
+Remove new lines from json key file first
+
+    tr -d '\n' < project-sa-key.json
+
+Install tfswitch https://warrensbox.github.io/terraform-switcher/
+brew install tfswitch
+
+If you have a dns registration consider usung a dns name for the storage bucket cluster/gke/main.tf
 
 Section for reader that wants to stand up the cluster and dlt as well as read
 about it. checkout -> operational as directly as possible.
+
+
+Go to terraform cloud, sign in, go to the project -> project settings -> general
+
+set the terraform version in the project to 0.12.18
+
+* https://www.terraform.io/docs/cloud/users-teams-organizations/users.html#api-tokens
+
+Generate an api token and put it in a credentials block 
+
+Main bar settings
+
+create a ~/.terraform.rc
+
+use TF_CLI_CONFIG_FILE to identify its location if necessary
+
+Add a credentials block
+
+https://www.terraform.io/docs/commands/cli-config.html#credentials
+
+
+
 
 ### cluster
 * fork

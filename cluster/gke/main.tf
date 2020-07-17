@@ -18,24 +18,6 @@ provider "kubernetes" {
   )
 }
 
-# cargo culted from https://stackoverflow.com/questions/58232731/kubectl-missing-form-terraform-cloud
-#resource "null_resource" "custom" {
-#  # change trigger to run every time
-#  triggers = {
-#    build_number = "${timestamp()}"
-#  }
-#
-#  # download kubectl
-#  provisioner "local-exec" {
-#    command = "curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl"
-#  }
-#
-#  # run kubectl
-#  #provisioner "local-exec" {
-#  #  command = "./kubectl apply -f deployment.yaml"
-#  #}
-#}
-
 # This describes all the workload identities and there respective
 # namespaces
 # 
@@ -192,9 +174,8 @@ resource "google_container_cluster" "k8s" {
 resource "google_storage_bucket" "cluster" {
   # requires that the cpe default service account is added as a delegated
   # owner at https://www.google.com/webmasters/verification
-  name = "${var.project}-cluster.${var.gcp_buckets_tld}"
-  # quorumpreempt-cluster.g.buckets.thaumagen.com | shasum
-  # name = "b9f115a33a0ff161cc64aa79b35fd2005c6859ce"
+  # name = "${var.project}-cluster.${var.gcp_buckets_tld}"
+  name = "${var.project}-${uuid()}"
   project = var.project
   # location is the 'region' here!
   location = var.region

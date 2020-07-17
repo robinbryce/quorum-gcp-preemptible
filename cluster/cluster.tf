@@ -1,5 +1,5 @@
 locals {
-  project = "quorumpreempt"
+  project = "ledger-2"
   max_quorum_nodes = 3
 }
 
