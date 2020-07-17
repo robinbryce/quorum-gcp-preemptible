@@ -3,15 +3,16 @@ locals {
   region = "europe-west2"
   zone = "europe-west2-a"
   max_quorum_nodes = 3
+  registered_domain = "thaumagen.com"
 }
 
 module "cluster" {
 
-  #project                             = local.project
-  project                             = "ledger-2"
+  project                             = local.project
+  registered_domain                   = local.registered_domain
   max_quorum_nodes                    = local.max_quorum_nodes
   gcp_project_id                      = local.project
-  gcp_buckets_tld                     = "g.buckets.thaumagen.com"
+  gcp_buckets_tld                     = "g.buckets.${local.registered_domain}"
   source                              = "./gke"
   region                              = "europe-west2"
   location                            = "europe-west2-a"

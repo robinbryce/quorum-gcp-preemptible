@@ -87,11 +87,12 @@ resource "google_compute_firewall" "default" {
   target_tags   = var.node_pools_tags.ingress-pool
 }
 
+# xxx TODO this is very deployment specific ...
 resource "google_dns_managed_zone" "preempt" {
   project = var.project
-  name = "robinbryce-me-zone"
-  dns_name = "robinbryce.me."
-  description = "robin bryce's dns zone"
+  name = "primary dns"
+  dns_name = "${var.registered_domain}."
+  description = "dns zone"
 }
 
 resource "google_dns_record_set" "a" {

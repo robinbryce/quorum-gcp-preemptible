@@ -2,6 +2,11 @@ variable "project" {
   type = string
 }
 
+# tie the dns name to the project for now
+variable "registered_domain" {
+  type = string
+}
+
 variable "zone" {
   type = string
 }
