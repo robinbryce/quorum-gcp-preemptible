@@ -9,10 +9,14 @@ variable "cluster_name" {
 }
 
 locals {
-  gcp_project_sa_fqn = "serviceAccount:${data.terraform_remote_state.cluster.outputs.gcp_project_id}.svc.id.goog"
+  # All remote state references are via variables with short cuts in the
+  # locals.
   gcp_project_id = data.terraform_remote_state.cluster.outputs.gcp_project_id
   gcp_project_region = data.terraform_remote_state.cluster.outputs.gcp_project_region
   gcp_project_zone = data.terraform_remote_state.cluster.outputs.gcp_project_zone
+  # this is the workload identity base for the cluster. All workload identities
+  # are constructed from this - thats how they work.
+  gcp_project_sa_fqn = "serviceAccount:${data.terraform_remote_state.cluster.outputs.gcp_project_id}.svc.id.goog"
 }
 
 provider "random" {}
@@ -22,7 +26,8 @@ provider "null" {}
 provider "google" {
   version     = "3.4.0"
   #project = data.terraform_remote_state.cluster.outputs.gcp_project_id
-  project = "ledger-2"
+  #project = "ledger-2"
+  project = local.gcp_project_id
 }
 
 data "terraform_remote_state" "cluster" {
