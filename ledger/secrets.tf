@@ -10,7 +10,7 @@ resource "google_secret_manager_secret" "qnode" {
     for pair in setproduct(
       range(0, var.max_prefunded_nodes),
         ["enode", "key", "wallet-address", "wallet-key", "wallet-password"]
-      ): "qnode-${tostring(pair[0])}-wallet-${pair[1]}"])
+      ): "qnode-${tostring(pair[0])}-${pair[1]}"])
 
   secret_id = each.key
   replication {
