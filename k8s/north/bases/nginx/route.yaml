@@ -6,7 +6,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`queth.preempt.robinbryce.me`) && PathPrefix(`/static`)
+    - match: Host(`queth.ledger-2.felixglasgow.com`) && PathPrefix(`/static`)
       kind: Rule
       services:
         - name: nginx-web
