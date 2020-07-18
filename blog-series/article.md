@@ -368,19 +368,30 @@ We store enode address alongside the key for convenience even though it is not
 secret - saves faffing with two different storage providers or having to
 re-derive the enode addr
 
-The init container gets the key every time - incase it roles. Caches most
-recent key on local disc. Two modes of operation:
+### Confirming public access to the set/add/get contract functions
 
-1. dev - if the key changes, force re-create the node (saving the old node
-   dir). maximum convenience for dev, not much risk to chain data
-2. prod - if key changes, refuse to start
+Using curl
 
-See also,
-* If you can afford it [Google KMS](https://medium.com/kudos-engineering/secret-management-in-kubernetes-and-gcp-the-journey-c76da8de96d8)
-* From the makers of kubeip [secrets-init](https://blog.doit-intl.com/kubernetes-and-secrets-management-in-cloud-858533c20dca)
-  Integrates with Google Secrets Manager and Google Workload Identity
-Glossy [Google - Secret Manager](https://cloud.google.com/secret-manager)
+    curl -k -v -d '{"value":2}'  https://queth.ledger-2.felixglasgow.com/adder/v1/set
+    curl -k -v -d '{"value":2}'  https://queth.ledger-2.felixglasgow.com/adder/v1/add
+    curl -k -v   https://queth.ledger-2.felixglasgow.com/adder/v1/get
 
+Look back up the log to check the TLS
+
+    Server certificate:
+     subject: CN=queth.ledger-2.felixglasgow.com
+     start date: Jul 18 22:36:34 2020 GMT
+     expire date: Oct 16 22:36:34 2020 GMT
+     issuer: CN=Fake LE Intermediate X1
+     SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+
+In particular, issuer should be Fake LE Intermediate X1 which is the lets
+encrypt default issuer. It takes a minute or so to issue the cert. While the
+challenge is outstanding you will see
+
+    issuer: CN=TRAEFIK DEFAULT CERT
+
+Watch the traefik logs to monitor the progress of the challenge.
 
 ## Ledger node routing
 
