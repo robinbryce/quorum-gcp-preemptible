@@ -386,12 +386,20 @@ Look back up the log to check the TLS
      SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
 
 In particular, issuer should be Fake LE Intermediate X1 which is the lets
-encrypt default issuer. It takes a minute or so to issue the cert. While the
+encrypt staging issuer.
+
+It takes a minute or so to issue the cert. While the
 challenge is outstanding you will see
 
     issuer: CN=TRAEFIK DEFAULT CERT
 
 Watch the traefik logs to monitor the progress of the challenge.
+
+You can switch it to the production issuer if you want a valid cert, but note
+that rate limits apply. With the current setup traefik will get a new cert
+every time the pod dies. Add a persistent volume to fix that. But note that
+cert-manager is a more robust (HA) approach - its just not workload identity
+aware yet as far as I can tell.
 
 ## Ledger node routing
 
