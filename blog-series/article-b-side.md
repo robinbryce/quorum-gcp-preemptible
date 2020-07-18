@@ -42,6 +42,46 @@ This may not be perfectly realizable. This is a list of things that affect it.
     cluster deletion and that is >0 charge
 * dns names if using
 
+## Cloud DNS, domain name and terraform
+
+[Sort out a domain](https://cloud.google.com/dns/docs/tutorials/create-domain-tutorial) if
+you don't already have one spare. If you do have one you will need to upate the
+nameservers once we are done creating the managed zone.
+
+Terraform fragments to create the manged zone and A record 
+
+* https://www.terraform.io/docs/providers/google/d/dns_managed_zone.html
+* https://www.terraform.io/docs/providers/google/r/dns_record_set.html
+
+The terraform boils down to
+
+    resource "google_dns_managed_zone" "preempt" {
+      project = var.project
+      name = "example-com-zone"
+      dns_name = "example.com."
+      description = "example dns zone"
+    }
+
+    resource "google_dns_record_set" "a" {
+      name         = "ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"
+      managed_zone = google_dns_managed_zone.preempt.name
+      type         = "A"
+      ttl          = 300
+
+      rrdatas = [google_compute_address.static-ingress.address]
+    }
+
+    resource "google_dns_record_set" "cname" {
+      name         = "queth.preempt.${google_dns_managed_zone.preempt.dns_name}"
+      managed_zone = google_dns_managed_zone.preempt.name
+      type         = "CNAME"
+      ttl          = 300
+
+      rrdatas = ["queth.preempt.${google_dns_managed_zone.preempt.dns_name}"]
+    }
+
+
+
 ## cert-manager
 
 [Google Cloud DNS & Cert-Manager][https://cert-manager.io/docs/configuration/acme/dns01/google/]
@@ -108,4 +148,56 @@ task file for now
 
 But traeffic can do dns01 challenge resolution on its own and uses LEGO so
 maybe we can use the workload identity directly ?
+
+## old create secrets
+Create the tf resource in the cluster module
+
+    resource "google_secret_manager_secret" "qnode" {
+      for_each = toset([
+        "qnode-0-key", "qnode-0-enode",
+        "qnode-1-key", "qnode-1-enode",
+        "qnode-2-key", "qnode-2-enode" ])
+      secret_id = each.key
+      replication = automatic
+    }
+
+Select appropriate version of beta provider in terraform.tf
+
+    required_providers {
+      google-beta = ">= 3.8"
+    }
+
+    terraform init  # to update provider if necessary can ommit
+
+Import the secret defintions
+
+    terraform import -provider=google-beta \
+        module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-0-enode\"] \
+        projects/quorumpreempt/secrets/qnode-0-enode
+
+Now go look at the contents of your tf state and convince yourself that the
+(public) enode address is not revlealed
+
+Now import the rest - do both the keys and th enodes now we know the keys wont
+get dumped into the tfstate.
+
+    terraform import -provider=google-beta \
+        module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-0-key\"] \
+        projects/quorumpreempt/secrets/qnode-0-key
+
+    for i $(seq 1 2)
+    do
+        terraform import -provider=google-beta \
+            module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-$i-enode\"] \
+            projects/quorumpreempt/secrets/qnode-$i-key
+        terraform import -provider=google-beta \
+            module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-$i-key\"] \
+            projects/quorumpreempt/secrets/qnode-$i-enode
+    done
+
+So we need to import the state
+
+[Terraform - Import](https://www.terraform.io/docs/import/index.html)
+[Terraform - Import Secret](https://www.terraform.io/docs/providers/google/r/secret_manager_secret.html#import)
+
 

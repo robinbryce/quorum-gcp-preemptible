@@ -65,78 +65,206 @@ Cloud Load balancing with 5 forwarding rules and 8 GB of ingress adds £18 PCM
 * use traeffic with workload idenity and lets encrypt to provide tls 'out of the box'
 * use strategy 'replace' for traeffic - rolling update can't possible work with how the node taints are setup
 
-## How to stand up the cluster
+## Deploy the project
 
-* Create an empty GCP project, set the project id explicitly if you want it to
-  match the project name
+There is quite a bit of devops to get through to arive at something that could
+form the basis of a production deploy. At the end of this we will be able call,
+in a controled way, specific contract functions on our ledger, over the public
+internet.  Access will be through a standard looking rest api serverd over tls.
+Lets Encrypt will be used for certificates and Envoy will be acting as a
+'cheap' load balancer and protecting our workloads from excessive demands.
+
+To get there we need to complete the following
+
+1. Fork [quorumpreempt](https://github.com/robinbryce/quorum-gcp-preemptible)
+2. Create Google Cloud Project and configure the service account for use by
+   terraform cloud
+3. Create a Terraform Cloud project.
+4. Create a terraform workspace for the cluster terraform resources and deploy
+   the cluster.
+5. Create a terraform workspace for the ledger and deploy the ledger resources
+6. Install the google cloud tooling needed to generate the node secrets (docker
+   image is tbd)
+7. Create the initial dlt keys, wallets and other secrets.
+8. Deploy the kubernets manififests (skaffold)
+
+### Terraform Cloud Cluster (steps 1 - 4)
+
+This will give you a cluster defined by terraform files in your git repository.
+Commits to that repository will be how you change and update the cluster
+infrastructure. This requires a google cloud project, a terraform io account
+and a git hub fork of the quorum-gcp-preemptible repository.
+
+The terraform infrastructure is split into cluster and ledger.
+
+cluster defines the single long lived ingress, the pre-emptible instances and
+the low level network configuration. A single static ip address is allocated.
+The firewall is configured to accept 80, 443 on the static ip.
+
+ledger defines the remaining infrastructure needed to support our dlt nodes,
+kubernetes workloads, and public ingress (dns)
+
+Start by forking the
+repository
+
+### Google Cloud Project Configuration (step 2)
+
+Sign up for or login to google cloud.
+
+* Create an empty GCP project, set the project id explicitly so that it matches
+  the project name (just because it is fewer names to keep track of)
 * Enable the compute engine api
 * Enable the service usage api (it may be by default)
 * Enable Cloud DNS api
-* Enable
+* Enable Kubernetes Engine API
 
 All can be found at APIs & Services / API Library
 
-Create an access key for terraform cloud
+Create an access key on the for terraform cloud for the default service account
 
-IAM & Admin / Service Accounts Compute Engine Default Service account -> create
-key -> create as json
+Find the Compute Engine default service account. 
+IAM & Admin / Service Accounts / Compute Engine Default Service account -> create
+key -> create as json save to local disc - it will be stored in the terraform
+workspace as a sensitive value (or make your own auth choices)
 
 Grant permission to the default compute engine service account for creating iam
-roles and asigning policies
+roles and asigning policies. For a development focused setup, simply granting
+Editor to the service account is a time saver though there are 
 
 IAM & Admin edit compute engine default sa
-Add another role -> Role Administrator, Project IAM Admin, Service Account Admin
+
+For this article the following roles were enabled. There is likely a tighter
+set.
+
+Add another role ->
+    Editor
+        Compute Network Admin
+            compute.networks.create
+        Compute Security Admin
+            compute.firewalls.create
+        DNS Administrator
+            zone creation
+        Kubernetes Engine Viewer,
+    Service Account Admin,
+    Secret Manager Admin,
+    Project IAM Admin,
+    Role Administrator
+
+And one more that I can't figure out to grant google_project_service the
+permission to create "cloudresourcemanager.googleapis.com"
+
+tip: missing permissions problems use IAM / Roles and filter by permissions to
+find out which roles have the permisions.
+
+best intro article
+https://cloud.google.com/community/tutorials/getting-started-on-gcp-with-terraform
+
 (pen icon to right)
 
-Create a terraform io account or login
+Create a terraform io account or login.
 
-For the repository for this project.
-[if changed default] update the project name in the cluster/cluster.tf
+### Terraform Cloud Workspace Configuration (step 3)
 
-Add GOOGLE_CLOUD_KEYFILE_JSON as an environment variable
+Create a workspace and link it to your fork of the repository.
+* Set the name of the workspace. It can be convenient if the cluster workspace
+  project matches the gcp project name
+* Set the terraform working directory to cluster
+* Enable 'only trigger runs when files in specified paths change' (it should
+    select the working directory by default)
+* Create the workspace
+
+Configure variables
+
+The default region and zone are europe-west2 and europ-west2-a, set
+gcp_project_region and gcp_project_zone workspace to override this
+
+* Create the workspace variable gke_project_id and set it to the name of your
+  gcp project.
+* Add GOOGLE_CLOUD_KEYFILE_JSON as an environment variable
 
 Remove new lines from json key file first
 
     tr -d '\n' < project-sa-key.json
 
-Install tfswitch https://warrensbox.github.io/terraform-switcher/
-brew install tfswitch
+Go to the Settings
+* Ensure execution  mode is remote
+* Enable auto apply
+* Set terraform 0.12.18 (todo try latest and remove restriction)
 
-If you have a dns registration consider usung a dns name for the storage bucket cluster/gke/main.tf
+In your local checkout of your quorum-gcp-preemptible fork
 
-Section for reader that wants to stand up the cluster and dlt as well as read
-about it. checkout -> operational as directly as possible.
+Edit cluster/terraform.tf and (at least) set the workspace name and the
+organsation name. Workspace prefixes may work better if you intend to have many
+clusters on the go.
+
+If you need multiple versions of terraform try [tfswitch](https://warrensbox.github.io/terraform-switcher/)
+
+Configure your local terraform cli
+
+Generate an api token in terraform cloud and put it in a credentials block
+
+[api-tokens](https://www.terraform.io/docs/cloud/users-teams-organizations/users.html#api-tokens)
+[cli-config](https://www.terraform.io/docs/commands/cli-config.html#credentials)
+
+At this point you could git commit and push and your cluster would stand up. To
+be able to validate terraform changes pre commit you need to configure your
+local terraform client
+
+Creating a ~/.terraformrc is the simplest if you don't already have
+arrangements.
+
+Then do
+
+    terraform init
+    terraform plan
+
+Despite the 'local' experience those commands have pushed your local changes to
+an isolated remote environment and run them their. The logs are streamed back
+to you. This workflow lets you have git be the source of truth for deployed
+infrastructure and still have the ability to do some validation pre commit.
+
+If all is well
+
+    git commit -m "initial cluster config"
+    git push
 
 
-Go to terraform cloud, sign in, go to the project -> project settings -> general
-
-set the terraform version in the project to 0.12.18
-
-* https://www.terraform.io/docs/cloud/users-teams-organizations/users.html#api-tokens
-
-Generate an api token and put it in a credentials block 
-
-Main bar settings
-
-create a ~/.terraform.rc
-
-use TF_CLI_CONFIG_FILE to identify its location if necessary
-
-Add a credentials block
-
-https://www.terraform.io/docs/commands/cli-config.html#credentials
+The cluster will now create automatically.
 
 
+### Deploy the ledger cluster resources (step 5)
 
+As before for the cluster workspace
+Create a workspace and link it to your fork of the repository.
+* Set the name of the workspace. It can be convenient if the ledger workspace
+  is related to the cluster workspace name
+* Set the terraform working directory to ledger
+* Enable 'only trigger runs when files in specified paths change' (it should
+    select the working directory by default)
+* Create the workspace
 
-### cluster
-* fork
-* google cloud project setup
-* tf cloud setup
-* git commit
-* make coffee - tada!
+Settings
+* add a run trigger for the cluster workspace
+* others as before
 
-### Environment setup, accounts and basic tooling
+Configure variables
+
+* ingress_domain your.domain.com
+* cluster_workspace the workspace of the cluster
+* Add (the same) GOOGLE_CLOUD_KEYFILE_JSON as an environment variable
+
+#### note on remote state and outputs being updated
+
+If outputs are added, and no other resources change, you will need to terraform
+taint <something> to get the new output variables into the state.
+
+This [issue](https://github.com/hashicorp/terraform/issues/22607) remains open.
+Creating a dummy random resource seems to be the work around. Described
+[here](https://support.hashicorp.com/hc/en-us/articles/360000958148-Terraform-outputs-fail-to-update-in-Terraform-Enterprise)
+
+### Install the google cloud tooling (step 6)
+
+[interactive sdk installer](https://cloud.google.com/sdk/docs/downloads-interactive)
 
 auth bootstrapping
 
@@ -144,7 +272,111 @@ auth bootstrapping
     gcloud container clusters get-credentials kluster
     gcloud auth application-default login
 
-## Network - routing geth nodes
+With that done do
+
+    cd tools
+    python3 -m pip install -r requirements.txt
+
+See [requirements.txt](../tools/requirements.txt) and particularly
+* [Python - google-auth](https://pypi.org/project/google-auth/)
+* [Python - google-cloud-secret-manager](https://pypi.org/project/google-cloud-secret-manager/)
+
+### Secret creation (step 7)
+
+Terraforms posture on secret data in statefiles is [Short Sighted](https://github.com/hashicorp/terraform/issues/516)
+Terraform cloud's posture is [Better](https://www.terraform.io/docs/state/sensitive-data.html) but far from ideal.
+
+With Google Secrets Manger the 'secret' and its 'version' are seperate things.
+The 'version' is the current value of the 'secret'. IAM policies are applied to
+the 'secret'. So, Use terraform to create the secret but use cli to set the
+version version (current value) - that way tf never sees the secret data at all
+but we can still use tf to manage the iam's for the secret
+
+But note that the tfstate has credentials to access the whole project so its
+still not a complete 'package'. Keys wrapped via Cloud KMS are probably the
+'belt and braces' answer but that is not cheap.
+
+Dev guides [Google - Secret Manager](https://cloud.google.com/solutions/secrets-management#tools)
+
+Using with terraform [Terraform and Secret Manager](https://www.sethvargo.com/managing-google-secret-manager-secrets-with-terraform/)
+
+So we _do not_ create the secret with terraform as that exposes the plain text
+in the state file.
+
+[secret generation support](../Taskfile.yml)
+
+Run:
+
+    gcloud auth application-default login
+    task nodekeys
+
+### Confirming secret access in the workloads
+
+
+Edit
+    k8s/ledger/bases/queth/serviceaccount.yaml
+    correcting all the gcp-service-account anotations :-/
+
+Test workload identity config:
+    kubectl apply -f k8s/ledger/bases/queth/serviceaccount.yaml
+    kubectl apply -f k8s/ledger/bases/queth/namespace.yaml
+    kubectl run -it \
+      --generator=run-pod/v1 \
+      --image google/cloud-sdk:slim \
+      --serviceaccount quorum-node-sa \
+      --namespace queth workload-identity-test
+
+At the prompt enter
+
+    gcloud auth list
+
+You should see
+
+                     Credentialed Accounts
+    ACTIVE  ACCOUNT
+    *       quorum-node-sa@ledger-2.iam.gserviceaccount.com
+
+But ledger-2 will be replaced by your gcp project name
+
+
+To set the active account, run:
+    $ gcloud config set account `ACCOUNT`
+
+
+init container with service principal auth to get token.
+use curl to get secret via api
+
+    TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
+    curl "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/qnode-0-key/versions/1:access" \
+        --request "GET" \
+        --header "authorization: Bearer ${TOKEN}" \
+        --header "content-type: application/json"
+
+Note: DO NOT add
+
+        --header "x-goog-user-project: quorumpreempt"
+
+As this requires an oauth2 token with authenticated *user* identity
+
+We store enode address alongside the key for convenience even though it is not
+secret - saves faffing with two different storage providers or having to
+re-derive the enode addr
+
+The init container gets the key every time - incase it roles. Caches most
+recent key on local disc. Two modes of operation:
+
+1. dev - if the key changes, force re-create the node (saving the old node
+   dir). maximum convenience for dev, not much risk to chain data
+2. prod - if key changes, refuse to start
+
+See also,
+* If you can afford it [Google KMS](https://medium.com/kudos-engineering/secret-management-in-kubernetes-and-gcp-the-journey-c76da8de96d8)
+* From the makers of kubeip [secrets-init](https://blog.doit-intl.com/kubernetes-and-secrets-management-in-cloud-858533c20dca)
+  Integrates with Google Secrets Manager and Google Workload Identity
+Glossy [Google - Secret Manager](https://cloud.google.com/secret-manager)
+
+
+## Ledger node routing
 
 The options for 'cheap' routing of consortum nodes are not great.  Allocating
 dns names and ip addresses for every geth node would be expensive and a lot of
@@ -178,6 +410,10 @@ Hybrid cloud Cloud VPN is for self hosted *and* on-prem nodes
 ## Kubernetes Workloads
 
 ### Identity and Authorization
+
+We use Google Workload identity to authorise all our kubernetes workloads.
+There is no need for explicit mechanisms to deliver secrets, key or
+certificants.
 
 * anoyingly, workload-identity is currently incompatible with isio side car
   injection (at least without customisation)
@@ -229,31 +465,6 @@ Upload:
         -H "Authorization: Bearer ${TOKEN}" \
         -H "Content-Type: text/plain" \
         "https://storage.googleapis.com/upload/storage/v1/b/quorumpreempt-cluster.g.buckets.thaumagen.com/o?uploadType=media&name=hello.txt"
-
-### Secrets
-
-Terraforms posture on secret data in statefiles is [Stupid](https://github.com/hashicorp/terraform/issues/516)
-
-Terraform cloud's posture is [Better](https://www.terraform.io/docs/state/sensitive-data.html) but far from ideal
-
-With Google Secrets Manger the 'secret' and its 'version' are seperate things.
-The 'version' is the current value of the 'secret'. IAM policies are applied to
-the 'secret'. So, Use terraform to create the secret but use cli to set the
-version version (current value) - that way tf never sees the secret data at all
-but we can still use tf to manage the iam's for the secret
-
-But note that the tfstate has credentials to access the whole project so its
-still not a complete 'package'. Keys wrapped via Cloud KMS are probably the
-'belt and braces' answer but that is too much cost & work for a developer
-focused setup.
-
-Dev guides [Google - Secret Manager](https://cloud.google.com/solutions/secrets-management#tools)
-
-Using with terraform [Terraform and Secret Manager](https://www.sethvargo.com/managing-google-secret-manager-secrets-with-terraform/)
-
-Note that we _do not_ create the secret with terraform as that exposes the
-plain text in the state file. terrafor cloud encrypts that at rest but its
-still not great.
 
 ### Storage for chain nodes
 
@@ -338,114 +549,6 @@ this may not be as compelling any more.
 [Istio ticket statefulset not supported](https://github.com/istio/istio/issues/10659)
 [Cassandra / Istio Article](https://aspenmesh.io/running-stateless-apps-with-service-mesh-kubernetes-cassandra-with-istio-mtls-enabled/)
 
-
-## Secret creation, terraform resource declaration & import
-
-We pre-create a bunch of keys and set the IAM's 'before the show'. Remote State
-and a TF project per node offers better granularity but a whole tf project per
-node is pretty heavy weight. Pre-creation of 'light weight' resources doesn't
-significantly impact our costs and is less faffy
-
-[secret generation support](./Taskfile.yml)
-
-
-Create the secrets for the nodes. This requires some setup.
-
-See [requirements.txt](./tools/requirements.txt) and particularly
-* [Python - google-auth](https://pypi.org/project/google-auth/)
-* [Python - google-cloud-secret-manager](https://pypi.org/project/google-cloud-secret-manager/)
-
-XXX: TODO: Sort out a docker image for this (and dind arrangements for linux and mac)
-
-Run:
-
-    gcloud auth application-default login
-
-    scripts/secret.sh nodekey qnode-0
-    scripts/secret.sh nodekey qnode-1
-    scripts/secret.sh nodekey qnode-2
-
-Create the tf resource in the cluster module
-
-    resource "google_secret_manager_secret" "qnode" {
-      for_each = toset([
-        "qnode-0-key", "qnode-0-enode",
-        "qnode-1-key", "qnode-1-enode",
-        "qnode-2-key", "qnode-2-enode" ])
-      secret_id = each.key
-      replication = automatic
-    }
-
-Select appropriate version of beta provider in terraform.tf
-
-    required_providers {
-      google-beta = ">= 3.8"
-    }
-
-    terraform init  # to update provider if necessary can ommit
-
-Import the secret defintions
-
-    terraform import -provider=google-beta \
-        module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-0-enode\"] \
-        projects/quorumpreempt/secrets/qnode-0-enode
-
-Now go look at the contents of your tf state and convince yourself that the
-(public) enode address is not revlealed
-
-Now import the rest - do both the keys and th enodes now we know the keys wont
-get dumped into the tfstate.
-
-    terraform import -provider=google-beta \
-        module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-0-key\"] \
-        projects/quorumpreempt/secrets/qnode-0-key
-
-    for i $(seq 1 2)
-    do
-        terraform import -provider=google-beta \
-            module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-$i-enode\"] \
-            projects/quorumpreempt/secrets/qnode-$i-key
-        terraform import -provider=google-beta \
-            module.cluster.google_secret_manager_secret.qnode-enode[\"qnode-$i-key\"] \
-            projects/quorumpreempt/secrets/qnode-$i-enode
-    done
-
-So we need to import the state
-
-[Terraform - Import](https://www.terraform.io/docs/import/index.html)
-[Terraform - Import Secret](https://www.terraform.io/docs/providers/google/r/secret_manager_secret.html#import)
-
-init container with service principal auth to get token.
-use curl to get secret via api
-
-    TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
-    curl "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/qnode-0-key/versions/1:access" \
-        --request "GET" \
-        --header "authorization: Bearer ${TOKEN}" \
-        --header "content-type: application/json"
-
-Note: DO NOT add
-
-        --header "x-goog-user-project: quorumpreempt"
-
-As this requires an oauth2 token with authenticated *user* identity
-
-We store enode address alongside the key for convenience even though it is not
-secret - saves faffing with two different storage providers or having to
-re-derive the enode addr
-
-The init container gets the key every time - incase it roles. Caches most
-recent key on local disc. Two modes of operation:
-
-1. dev - if the key changes, force re-create the node (saving the old node
-   dir). maximum convenience for dev, not much risk to chain data
-2. prod - if key changes, refuse to start
-
-See also,
-* If you can afford it [Google KMS](https://medium.com/kudos-engineering/secret-management-in-kubernetes-and-gcp-the-journey-c76da8de96d8)
-* From the makers of kubeip [secrets-init](https://blog.doit-intl.com/kubernetes-and-secrets-management-in-cloud-858533c20dca)
-  Integrates with Google Secrets Manager and Google Workload Identity
-Glossy [Google - Secret Manager](https://cloud.google.com/secret-manager)
 
 ## Ports and IP Assignment
 
@@ -639,10 +742,10 @@ By default, firewall rules restrict cluster master to only initiate TCP connecti
 
 adder 'getsetadd.sol' and go-ethereum based grpc wrapper service Hello 'CaaS'.
 
-* [getsetadd.sol](./adder/getsetadd.sol)
-* [main.go](./adder/service/main.go)
-* [adder.proto](./adder/api/adder/v1/adder.proto)
-* [Taskfile.yml](./adder/Taskfile.yml)
+* [getsetadd.sol](../adder/getsetadd.sol)
+* [main.go](../adder/service/main.go)
+* [adder.proto](../adder/api/adder/v1/adder.proto)
+* [Taskfile.yml](../adder/Taskfile.yml)
 
 For deeper examples and tooling for Contracts As A Service see:
 
@@ -682,44 +785,6 @@ Get the current value
     grpcurl --plaintext -protoset ./adder.protset localhost:9091 \
         adder.v1.Adder.Get | jq -r .value | base64 -D
     2
-
-## Cloud DNS, domain name and terraform
-
-[Sort out a domain](https://cloud.google.com/dns/docs/tutorials/create-domain-tutorial) if
-you don't already have one spare. If you do have one you will need to upate the
-nameservers once we are done creating the managed zone.
-
-Terraform fragments to create the manged zone and A record 
-
-* https://www.terraform.io/docs/providers/google/d/dns_managed_zone.html
-* https://www.terraform.io/docs/providers/google/r/dns_record_set.html
-
-The terraform boils down to
-
-    resource "google_dns_managed_zone" "preempt" {
-      project = var.project
-      name = "example-com-zone"
-      dns_name = "example.com."
-      description = "example dns zone"
-    }
-
-    resource "google_dns_record_set" "a" {
-      name         = "ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"
-      managed_zone = google_dns_managed_zone.preempt.name
-      type         = "A"
-      ttl          = 300
-
-      rrdatas = [google_compute_address.static-ingress.address]
-    }
-
-    resource "google_dns_record_set" "cname" {
-      name         = "queth.preempt.${google_dns_managed_zone.preempt.dns_name}"
-      managed_zone = google_dns_managed_zone.preempt.name
-      type         = "CNAME"
-      ttl          = 300
-
-      rrdatas = ["queth.preempt.${google_dns_managed_zone.preempt.dns_name}"]
-    }
 
 ## North/South Envoy+Traefik bridge with TLS & Lets Encrypt
 
@@ -855,13 +920,13 @@ A nice backround article on [modern-network-load-balancing](https://blog.envoypr
 
 The final traefik-web setup is
 
-* [service.yaml](./k8s/traefik/service.yaml)
-* [deployment.yaml](./k8s/traefik/deployment.yaml)
+* [service.yaml](../k8s/traefik/service.yaml)
+* [deployment.yaml](../k8s/traefik/deployment.yaml)
 
 With envoy looking like this
 
-* [envoy-north/configmap.yaml](./k8s/envoy-north/configmap.yaml)
-* [envoy-north/development.yaml](./k8s/envoy-north/development.yaml)
+* [envoy-north/configmap.yaml](../k8s/envoy-north/configmap.yaml)
+* [envoy-north/development.yaml](../k8s/envoy-north/development.yaml)
 
 TODO(tls/letsencrypt)
 
