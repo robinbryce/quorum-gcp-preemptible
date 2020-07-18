@@ -15,12 +15,21 @@ variable "gcp_project_zone" {
     default = "europe-west2-a"
 }
 output "gcp_project_zone" { value = var.gcp_project_zone }
+output "static_ingress" {
+  value = module.cluster.static_ingress
+}
 
 variable "cluster_name" {
     type = string
     default = "kluster"
 }
 output "cluster_name" { value = var.cluster_name }
+
+# This exists to enable output variables to be added without changing other
+# resources
+# * [issue](https://github.com/hashicorp/terraform/issues/22607) remains open.
+# * [Workaround](https://support.hashicorp.com/hc/en-us/articles/360000958148-Terraform-outputs-fail-to-update-in-Terraform-Enterprise)
+resource "null_resource" "n" {}
 
 module "cluster" {
 

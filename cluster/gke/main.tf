@@ -5,6 +5,10 @@ provider "google" {
   #zone = var.zone
 }
 
+output "static_ingress" {
+  value = google_compute_address.static-ingress.address
+}
+
 data "google_client_config" "provider" {}
 data "google_container_cluster" "quorumpreempt" {
   name = var.cluster_name
