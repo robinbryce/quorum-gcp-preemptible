@@ -8,6 +8,12 @@ variable "cluster_name" {
     default = "kluster"
 }
 
+variable "max_prefunded_nodes" {
+  type = number
+  default = 3
+}
+output "max_quorum_nodes" { value = var.max_prefunded_nodes }
+
 locals {
   # All remote state references are via variables with short cuts in the
   # locals.
@@ -57,11 +63,13 @@ data "google_container_cluster" "quorumpreempt" {
   location = data.terraform_remote_state.cluster.outputs.gcp_project_zone
 }
 
+resource "random_uuid" "cluster_bucket" { }
+
 resource "google_storage_bucket" "cluster" {
   # requires that the cpe default service account is added as a delegated
   # owner at https://www.google.com/webmasters/verification
   # name = "${local.gcp_project_id}-cluster.${var.gcp_buckets_tld}"
-  name = "${local.gcp_project_id}-${uuid()}"
+  name = "${local.gcp_project_id}-${random_uuid.cluster_bucket.result}"
   project = local.gcp_project_id
   # location is the 'region' here!
   location = local.gcp_project_region
