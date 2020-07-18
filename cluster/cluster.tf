@@ -2,16 +2,25 @@ variable "gcp_project_id" {
     type = string
     default = "quorumpreempt"
 }
+output "gcp_project_id" { value = var.gcp_project_id }
 
 variable "gcp_project_region" {
-    type = string
-    default = "europe-west2"
+  type = string
+  default = "europe-west2"
 }
+output "gcp_project_region" { value = var.gcp_project_region }
 
 variable "gcp_project_zone" {
     type = string
     default = "europe-west2-a"
 }
+output "gcp_project_zone" { value = var.gcp_project_zone }
+
+variable "cluster_name" {
+    type = string
+    default = "kluster"
+}
+output "cluster_name" { value = var.cluster_name }
 
 module "cluster" {
 
@@ -21,7 +30,7 @@ module "cluster" {
   region                              = var.gcp_project_region
   location                            = var.gcp_project_zone
   zone                                = var.gcp_project_zone
-  cluster_name                        = "kluster"
+  cluster_name                        = var.cluster_name
   cluster_range_name                  = "gke-pods"
   services_range_name                 = "gke-services"
   daily_maintenance_window_start_time = "03:00"
