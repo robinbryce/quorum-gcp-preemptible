@@ -22,7 +22,7 @@ spec:
         emptyDir: {}
       initContainers:
       - name: adderinit
-        image: eu.gcr.io/quorumpreempt/shcurl
+        image: eu.gcr.io/ledger-2/shcurl
         command:
           - sh
         args:
@@ -32,7 +32,7 @@ spec:
               http://metadata/computeMetadata/v1/instance/service-accounts/default/token | \
               jq -r .access_token)
             [ -n "$TOKEN" ] || exit 1
-            curl -sS "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/qnode-0-wallet-key/versions/latest:access" \
+            curl -sS "https://secretmanager.googleapis.com/v1/projects/ledger-2/secrets/qnode-0-wallet-key/versions/latest:access" \
               --request "GET" \
               --header "authorization: Bearer ${TOKEN}" \
               --header "content-type: application/json" | \
@@ -44,7 +44,7 @@ spec:
 
       containers:
       - name: "adder"
-        image: eu.gcr.io/quorumpreempt/adder
+        image: eu.gcr.io/ledger-2/adder
         ports:
           - name: grpc-port
             containerPort: 9091

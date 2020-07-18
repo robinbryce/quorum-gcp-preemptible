@@ -191,7 +191,7 @@ def cmd_nodeinit(args):
         raise Error(
             "The nodekey must be stored outside of the nodedir (symlinked from emptyDir)")
 
-    key = get_secret(token, "quorumpreempt", args.nodekey_secretname, "latest")
+    key = get_secret(token, args.gcp_project, args.nodekey_secretname, "latest")
     enode = derive_node_pubkey(args.bootnode, key)
 
     resp, generation = get_object(
@@ -375,7 +375,7 @@ def cmd_genesis(args):
     alloc = genesis.setdefault("alloc", {})
     for wallet in genesisconf["allocwallets"]:
         name, balance = wallet["name"], wallet["balance"]
-        address = "0x" + get_secret(token, "quorumpreempt", f"{name}-address", "latest").hex()
+        address = "0x" + get_secret(token, args.gcp_project, f"{name}-address", "latest").hex()
         alloc[address] = dict(balance=balance)
         print(f"funding genesis wallet '{name}' at {address} with {balance}")
 
@@ -402,6 +402,7 @@ def arg_parser(args=None):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     top.set_defaults(func=lambda a: print("see sub commands in help"))
+    top.add_argument("-p", "--gcp-project", default="quorumpreempt")
     top.add_argument(
         "--token", help="provide bearer token for gcp api access")
     top.add_argument(

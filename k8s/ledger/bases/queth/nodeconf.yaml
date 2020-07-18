@@ -9,12 +9,12 @@ metadata:
 data:
   nodeconf.json: |-
     {
-        "chain_blob_path": "quorumpreempt/chain1",
-        "genesis_blob":"quorumpreempt/chain1/queth-genesis.json",
-        "static_nodes_blob": "quorumpreempt/chain1/static-nodes.json",
+        "chain_blob_path": "ledger",
+        "genesis_blob":"ledger/queth-genesis.json",
+        "static_nodes_blob": "ledger/static-nodes.json",
         "key": "/var/lib/quorum/nodekey",
         "dir": "/var/lib/quorum/node",
-        "bucket": "quorumpreempt-cluster.g.buckets.thaumagen.com",
+        "bucket": "ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db",
         "bind": "127.0.0.1",
         "address": "127.0.0.1",
         "port": 30303,

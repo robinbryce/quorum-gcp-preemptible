@@ -342,9 +342,15 @@ But ledger-2 will be replaced by your gcp project name
 To set the active account, run:
     $ gcloud config set account `ACCOUNT`
 
+ack replace qurorumpreempt/ledger-2 the project name in all k8s yamls ...
+(for now, there are better ways to do that with customise, but some edits will
+always be required if using the kustomize model)
+
+* brew install skaffold
+* brew install kustomize
 
 init container with service principal auth to get token.
-use curl to get secret via api
+use curl to get secret via api (replace quorumpreempt with your gcp project name)
 
     TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
     curl "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/qnode-0-key/versions/1:access" \

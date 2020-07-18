@@ -15,30 +15,30 @@ deploy:
 
 build:
   artifacts:
-  - image: eu.gcr.io/quorumpreempt/adder-builder
+  - image: eu.gcr.io/ledger-2/adder-builder
     context: adder
     docker:
       dockerfile:
         Dockerfile-builder
-  - image: eu.gcr.io/quorumpreempt/adder
+  - image: eu.gcr.io/ledger-2/adder
     context: adder
     docker:
       dockerfile:
         Dockerfile
-  - image: eu.gcr.io/quorumpreempt/shcurl
+  - image: eu.gcr.io/ledger-2/shcurl
     docker:
       dockerfile:
         shcurl/Dockerfile
-  - image: eu.gcr.io/quorumpreempt/nginx-web
+  - image: eu.gcr.io/ledger-2/nginx-web
     context: nginx-alpine
-  - image: eu.gcr.io/quorumpreempt/quethraft-init
+  - image: eu.gcr.io/ledger-2/quethraft-init
     context: queth
     sync:
       infer:
     docker:
       dockerfile:
         Dockerfile-init
-  - image: eu.gcr.io/quorumpreempt/queth
+  - image: eu.gcr.io/ledger-2/queth
     context: queth
     sync:
       infer:

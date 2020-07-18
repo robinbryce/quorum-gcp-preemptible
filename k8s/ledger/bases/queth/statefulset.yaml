@@ -36,7 +36,7 @@ spec:
 
       initContainers:
       - name: quethinit
-        image: eu.gcr.io/quorumpreempt/quethraft-init
+        image: eu.gcr.io/ledger-2/quethraft-init
         volumeMounts:
           - name: quorum-pv
             mountPath: /var/lib/quorum
@@ -62,6 +62,7 @@ spec:
           - |
             set -e
             python3 quethraft.py \
+              --gcp-project=ledger-2 \
               --nodedir=/var/lib/quorum/node \
               --address=${POD_NAME}.queth.${NAMESPACE}.svc.cluster.local \
               --nodekey-secretname=qnode-${POD_NAME#*-}-key \

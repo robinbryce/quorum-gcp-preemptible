@@ -19,7 +19,7 @@ resource "google_service_account_iam_member" "workloads" {
     queth_genesis = ["queth", "quorum-genesis-sa"]
     queth_node = ["queth", "quorum-node-sa"]
     queth_membership = ["queth", "quorum-membership-sa"]
-    queth_client = ["queth", "quorum-client-sa"]
+    queth_client = ["caas", "quorum-client-sa"]
   }
 
   service_account_id = google_service_account.workloads[each.key].name
