@@ -20,11 +20,6 @@ variable "cluster_name" {
   type = string
 }
 
-variable "members_bucket_admins" {
-  type = list(string)
-  default = ["user:robinbryce@gmail.com"]
-}
-
 variable "region" {
   type = string
 }
@@ -34,12 +29,6 @@ variable "location" {
 }
 
 variable "gcp_project_id" {
-  type = string
-}
-
-variable "gcp_buckets_tld" {
-  # must have been verified, see
-  # https://cloud.google.com/storage/docs/domain-name-verification
   type = string
 }
 
@@ -75,13 +64,6 @@ variable "private_ip_google_access" {
 # internal IP adddresses of masters
 variable "master_ipv4_cidr_block" {
   type = string
-}
-
-# IAM for storage.objectViewer
-# access GCR private images
-variable "access_private_images" {
-  type    = bool
-  default = false
 }
 
 # HTTP (L7) load balancer

@@ -12,7 +12,6 @@ module "cluster" {
   registered_domain                   = local.registered_domain
   max_quorum_nodes                    = local.max_quorum_nodes
   gcp_project_id                      = local.project
-  gcp_buckets_tld                     = "g.buckets.${local.registered_domain}"
   source                              = "./gke"
   region                              = "europe-west2"
   location                            = "europe-west2-a"
