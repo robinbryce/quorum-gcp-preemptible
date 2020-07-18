@@ -8,6 +8,13 @@ variable "cluster_name" {
     default = "kluster"
 }
 
+locals {
+  gcp_project_sa_fqn = "serviceAccount:${data.terraform_remote_state.cluster.outputs.gcp_project_id}.svc.id.goog"
+  gcp_project_id = data.terraform_remote_state.cluster.outputs.gcp_project_id
+  gcp_project_region = data.terraform_remote_state.cluster.outputs.gcp_project_region
+  gcp_project_zone = data.terraform_remote_state.cluster.outputs.gcp_project_zone
+}
+
 provider "random" {}
 
 provider "null" {}
@@ -43,4 +50,15 @@ data "google_container_cluster" "quorumpreempt" {
   name = var.cluster_name
   project = data.terraform_remote_state.cluster.outputs.gcp_project_id
   location = data.terraform_remote_state.cluster.outputs.gcp_project_zone
+}
+
+resource "google_storage_bucket" "cluster" {
+  # requires that the cpe default service account is added as a delegated
+  # owner at https://www.google.com/webmasters/verification
+  # name = "${local.gcp_project_id}-cluster.${var.gcp_buckets_tld}"
+  name = "${local.gcp_project_id}-${uuid()}"
+  project = local.gcp_project_id
+  # location is the 'region' here!
+  location = local.gcp_project_region
+  storage_class = "STANDARD"
 }
