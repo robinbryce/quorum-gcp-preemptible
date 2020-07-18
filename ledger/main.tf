@@ -8,6 +8,11 @@ variable "cluster_name" {
     default = "kluster"
 }
 
+variable "ingress_domain" {
+  type = string
+  default = "example.com"
+}
+
 variable "max_prefunded_nodes" {
   type = number
   default = 3
@@ -23,6 +28,7 @@ locals {
   # this is the workload identity base for the cluster. All workload identities
   # are constructed from this - thats how they work.
   gcp_project_sa_fqn = "serviceAccount:${data.terraform_remote_state.cluster.outputs.gcp_project_id}.svc.id.goog"
+  static_ingress = data.terraform_remote_state.cluster.outputs.static_ingress
 }
 
 provider "random" {}
