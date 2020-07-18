@@ -17,10 +17,10 @@ resource "google_dns_record_set" "a" {
 
 resource "google_dns_record_set" "cname" {
   project = local.gcp_project_id
-  name = "queth.preempt.${google_dns_managed_zone.preempt.dns_name}"
-  managed_zone = google_dns_managed_zone.preempt.name
+  name = "queth.${local.gcp_project_id}.${google_dns_managed_zone.primary.dns_name}"
+  managed_zone = google_dns_managed_zone.primary.name
   type = "CNAME"
   ttl = 300
 
-  rrdatas = ["ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"]
+  rrdatas = ["${local.gcp_project_id}.${google_dns_managed_zone.primary.dns_name}"]
 }
