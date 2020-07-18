@@ -90,7 +90,7 @@ resource "google_compute_firewall" "default" {
 # xxx TODO this is very deployment specific ...
 resource "google_dns_managed_zone" "preempt" {
   project = var.project
-  name = "primary dns"
+  name = "primary-dns"
   dns_name = "${var.registered_domain}."
   description = "dns zone"
 }
