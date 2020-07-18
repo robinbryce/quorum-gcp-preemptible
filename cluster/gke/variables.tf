@@ -2,18 +2,8 @@ variable "project" {
   type = string
 }
 
-# tie the dns name to the project for now
-variable "registered_domain" {
-  type = string
-}
-
 variable "zone" {
   type = string
-}
-
-# pre-create resources for this many nodes (where those resources are cheap or free)
-variable "max_quorum_nodes" {
-  type = number
 }
 
 variable "cluster_name" {

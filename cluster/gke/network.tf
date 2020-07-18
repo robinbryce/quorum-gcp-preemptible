@@ -86,31 +86,3 @@ resource "google_compute_firewall" "default" {
   source_ranges = ["0.0.0.0/0"]
   target_tags   = var.node_pools_tags.ingress-pool
 }
-
-# xxx TODO this is very deployment specific ...
-resource "google_dns_managed_zone" "preempt" {
-  project = var.project
-  name = "primary-dns"
-  dns_name = "${var.registered_domain}."
-  description = "dns zone"
-}
-
-resource "google_dns_record_set" "a" {
-  project = var.project
-  name         = "ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"
-  managed_zone = google_dns_managed_zone.preempt.name
-  type         = "A"
-  ttl          = 300
-
-  rrdatas = [google_compute_address.static-ingress.address]
-}
-
-resource "google_dns_record_set" "cname" {
-  project = var.project
-  name         = "queth.preempt.${google_dns_managed_zone.preempt.dns_name}"
-  managed_zone = google_dns_managed_zone.preempt.name
-  type         = "CNAME"
-  ttl          = 300
-
-  rrdatas = ["ingress.preempt.${google_dns_managed_zone.preempt.dns_name}"]
-}

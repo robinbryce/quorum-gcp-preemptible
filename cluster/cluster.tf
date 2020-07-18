@@ -1,21 +1,26 @@
-locals {
-  project = "ledger-2"
-  region = "europe-west2"
-  zone = "europe-west2-a"
-  max_quorum_nodes = 3
-  registered_domain = "thaumagen.com"
+variable "gcp_project_id" {
+    type = string
+    default = "quorumpreempt"
+}
+
+variable "gcp_project_region" {
+    type = string
+    default = "europe-west2"
+}
+
+variable "gcp_project_zone" {
+    type = string
+    default = "europe-west2-a"
 }
 
 module "cluster" {
 
-  project                             = local.project
-  registered_domain                   = local.registered_domain
-  max_quorum_nodes                    = local.max_quorum_nodes
-  gcp_project_id                      = local.project
+  project                             = var.gcp_project_id
+  gcp_project_id                      = var.gcp_project_id
   source                              = "./gke"
-  region                              = "europe-west2"
-  location                            = "europe-west2-a"
-  zone                                = "europe-west2-a"
+  region                              = var.gcp_project_region
+  location                            = var.gcp_project_zone
+  zone                                = var.gcp_project_zone
   cluster_name                        = "kluster"
   cluster_range_name                  = "gke-pods"
   services_range_name                 = "gke-services"
@@ -45,7 +50,7 @@ module "cluster" {
       disk_size_gb       = 10
       disk_type          = "pd-standard"
       image_type         = "COS"
-      service_account    = "kluster-serviceaccount@${local.project}.iam.gserviceaccount.com"
+      service_account    = "kluster-serviceaccount@${var.gcp_project_id}.iam.gserviceaccount.com"
     }
     work-pool = {
       machine_type       = "n1-standard-2" # $$$
@@ -58,7 +63,7 @@ module "cluster" {
       disk_size_gb       = 64
       disk_type          = "pd-standard"
       image_type         = "COS"
-      service_account    = "kluster-serviceaccount@${local.project}.iam.gserviceaccount.com"
+      service_account    = "kluster-serviceaccount@${var.gcp_project_id}.iam.gserviceaccount.com"
 
     }
   }
