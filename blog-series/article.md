@@ -361,21 +361,21 @@ makes the whole thing scriptable *with no input cli arguments at all*
 
 The key files are
 
-[overlay.sa.jsonnet.TEMPLATE](../k8s/dev-example/overlay.sa.jsonnet.TEMPLATE)
-[overlay.env.jsonnet.TEMPLATE](../k8s/dev-example/overlay.env.jsonnet.TEMPLATE)
-[overlay.jsonnet](../k8s/dev-example/overlay.jsonnet)
+* [overlay.sa.jsonnet.TEMPLATE](../k8s/dev-example/overlay.sa.jsonnet.TEMPLATE)
+* [overlay.env.jsonnet.TEMPLATE](../k8s/dev-example/overlay.env.jsonnet.TEMPLATE)
+* [overlay.jsonnet](../k8s/dev-example/overlay.jsonnet)
 
 Example terraform output -json
 
-[ledger.tf.out.json](../k8s/dev-example/ledger.tf.out.json)
+* [ledger.tf.out.json](../k8s/dev-example/ledger.tf.out.json)
 
 Which renders
 
-[overlay.json](../k8s/dev-example/overlay.json)
+* [overlay.json](../k8s/dev-example/overlay.json)
 
 And kustomize consumes this directly in
 
-[kustomization.yaml](../k8s/dev-example/kustomization.yaml)
+* [kustomization.yaml](../k8s/dev-example/kustomization.yaml)
 
 By way of comparison, without *some* templating, to deploy this project on your
 own google project you need to:
