@@ -71,7 +71,7 @@ To get there we need to complete the following
 6. Install the google cloud tooling needed to generate the node secrets (docker
    image is tbd)
 7. Secret Creation - dlt node keys, wallets and other secrets.
-8. Bootstrapping (minor search and replace) the kubernetes manififests - its easier this way.
+8. Bootstrapping with terraform output and jsonnet
 9. Confirm workloads can access the secrets
 10. Deploy the kubernets manififests with skaffold
 
