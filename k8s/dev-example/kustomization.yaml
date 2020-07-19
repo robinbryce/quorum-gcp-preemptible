@@ -15,7 +15,9 @@ images:
     newName: eu.gcr.io/ledger-2/nginx-web
 
 patchesStrategicMerge:
-  - overlay.yaml
+  #- overlay.yaml
+  # see overlay.jsonnet for how to render this overlay from the terraform output
+  - overlay.json
 
 patchesJson6902:
 # These could probably be done in the overlay too, but I wanted an example of

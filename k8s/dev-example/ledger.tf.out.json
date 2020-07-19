@@ -1,0 +1,42 @@
+{
+  "cluster_bucket": {
+    "sensitive": false,
+    "type": "string",
+    "value": "ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db"
+  },
+  "cluster_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "kluster"
+  },
+  "cluster_workspace": {
+    "sensitive": false,
+    "type": "string",
+    "value": "ledger-2"
+  },
+  "gcp_project_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "ledger-2"
+  },
+  "gcp_project_region": {
+    "sensitive": false,
+    "type": "string",
+    "value": "europe-west2"
+  },
+  "gcp_project_zone": {
+    "sensitive": false,
+    "type": "string",
+    "value": "europe-west2-a"
+  },
+  "ingress_domain": {
+    "sensitive": false,
+    "type": "string",
+    "value": "felixglasgow.com"
+  },
+  "max_quorum_nodes": {
+    "sensitive": false,
+    "type": "number",
+    "value": 3
+  }
+}

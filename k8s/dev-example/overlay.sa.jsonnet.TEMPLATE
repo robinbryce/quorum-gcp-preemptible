@@ -1,0 +1,22 @@
+// https://github.com/databricks/jsonnet-style-guide#file-structure
+function (tfOut) [{
+  apiVersion: 'v1',
+  kind: 'ServiceAccount',
+  metadata: {
+    name: sa.name,
+    namespace: sa.namespace,
+    annotations: {
+      ['iam.gke.io/gcp-service-account']:
+        '%s@%s.iam.gserviceaccount.com' % [
+          sa.name, tfOut.gcp_project_id.value]
+    }
+  }
+} for sa in [
+    { name: 'kubeip-sa', namespace: 'kube-system' },
+    { name: 'dns01solver-sa', namespace: 'traefik' },
+    { name: 'quorum-client-sa', namespace: 'caas' },
+    { name: 'quorum-node-sa', namespace: 'queth' },
+    { name: 'quorum-membership-sa', namespace: 'queth' },
+    { name: 'quorum-genesis-sa', namespace: 'queth' },
+  ]
+]

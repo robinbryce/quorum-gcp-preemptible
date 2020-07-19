@@ -308,16 +308,17 @@ The idea of kustomize is solid, having manifests I can deploy directly is a
 envsubst are venerable and often completely adequate solutions for *seed*
 customization. The get hairy fast when they are embeded in daily workflow.
 
-To deploy this project on your own google project you need to:
+It is worth sticking with the basic kustomize primitives for as many things as
+possible. Their world view is to accomodate clear use cases directly as
+transformations of native kubernetes objects. This enables manifest to stay
+valid without parameterization. And after an adjustment period, template
+variables mostly feel like a bad habbit well gotten rid off. images, image
+tags, config maps and even individual fields can all be patched.
 
-1. Copy k8s/dev-example to k8s/dev
-2. Edit the skaffold.yaml to point kustomize at dev rather than dev-example
-3. In all yamls in k8s/dev search and replace `ledger-2` with your own project
-4. In all yamls in k8s/dev Search and replace `example.com` with your domain.
-5. In quethinit-env-patch.yaml set the value for the BUCKET variable to the 
-   cluster_bucket output from your ledger terraform apply
-
-It will take five minutes, and you can commit the results to your own fork. Done.
+But some things that ought to be 'easy' are made 'hard' by the philosophy.
+[vars](https://github.com/kubernetes-sigs/kustomize/issues/2052) hasn't worked
+out and never really did what people wanted when they found it - a little
+templating.
 
 I very much like the idea of *seeding* configuration like this using jsonnet to
 generate the initial configuration. [Databricks on jsonnet](https://databricks.com/blog/2017/06/26/declarative-infrastructure-jsonnet-templating-language.html)
@@ -326,12 +327,68 @@ has a lot of good insite here.  [go-jsonnet](https://github.com/google/go-jsonne
 For this project, this would mean we templatize the kustomizations that are
 most deplendent on the repository owner: google project name, deployment domain
 name. And then generating the repository owner specific kustomizations once on
-initial fork/clone. This suites the purpose of a developer friendly setup, and
-doesn't 'over deliver', but the choices are unlikely to be right for all. So
-I have left it at search and replace.
+initial fork/clone.
 
 Bootstraping has an [ancient and venerable](https://www.gnu.org/software/automake/faq/autotools-faq.html#What-does-_002e_002fbootstrap-or-_002e_002fautogen_002esh-do_003f)
  - and not entirely flatering - precedent.
+
+It turns out there is a fairly slick way to combine terraform with kustomize.
+The basic approach is to *render* the initial kustomize overlay using
+[jsonnet](https://jsonnet.org/learning/tutorial.html). On its own thats just
+another templating approach. And there are plenty to choose from already.  What
+sets jsonnet appart is how cleanly it integrates with `terraform output -json`
+
+1. Get the terraform output as json
+
+    cd tf/ledger
+    terraform output -json ../../k8s/dev-example/ledger.tf.out.json
+
+2. Render the kustomize overlay for *your* terraform output.
+
+    cd k8s/dev-example
+    jsonnet -y overlay.jsonnet
+
+The dev-example directory has all the outputs checked in, examine the diff to
+see whats changed.
+
+(Minor todo - I need to put the letsencrypt email in a tf output var)
+
+This approach gives us a seeding, retains all the power and clarity of
+kustomize manifests but does not require brittle sed/envsubst approaches. Most
+importantly the setup instructions are a series of command that require minimal
+arguments. And none of those arguments are specific to the deployment.  This
+makes the whole thing scriptable *with no input cli arguments at all*
+
+The key files are
+
+* ../k8s/dev-example/overlay.sa.jsonnet.TEMPLATE
+* ../k8s/dev-example/overlay.env.jsonnet.TEMPLATE
+* ../k8s/dev-example/overlay.jsonnet
+
+Example terraform output -json
+
+* ../k8s/dev-example/ledger.tf.out.json
+
+Which renders
+
+* ../k8s/dev-example/overlay.json
+
+And kustomize consumes this directly in
+
+* ../k8s/dev-example/kustomization.yaml
+
+By way of comparison, without *some* templating, to deploy this project on your
+own google project you need to:
+
+1. Copy k8s/dev-example to k8s/dev
+2. Edit the skaffold.yaml to point kustomize at dev rather than dev-example
+3. In all yamls in k8s/dev search and replace `ledger-2` with your own project
+4. In all yamls in k8s/dev Search and replace `example.com` with your domain.
+5. In quethinit-env-patch.yaml set the value for the BUCKET variable to the 
+   cluster_bucket output from your ledger terraform apply
+
+It will problably only take a handful of minutes, and you can commit the
+results to your own fork. BUt it is a task that gets old super fast.
 
 * install skaffold
 * install kustomize
