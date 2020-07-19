@@ -20,6 +20,9 @@ variable "max_prefunded_nodes" {
 output "max_quorum_nodes" { value = var.max_prefunded_nodes }
 output "cluster_bucket" { value = "${local.gcp_project_id}-${random_uuid.cluster_bucket.result}" }
 
+# exists to fource re apply when only output values have changed
+resource "null_resource" "n" {}
+
 locals {
   # All remote state references are via variables with short cuts in the
   # locals.
