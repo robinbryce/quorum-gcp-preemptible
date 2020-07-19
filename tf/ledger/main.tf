@@ -2,26 +2,33 @@ variable "cluster_workspace" {
   type = string
   default = "cluster"
 }
+output "cluster_workspace" { value = var.cluster_workspace }
 
 variable "cluster_name" {
     type = string
     default = "kluster"
 }
+output "cluster_name" { value = var.cluster_name }
 
 variable "ingress_domain" {
   type = string
   default = "example.com"
 }
+output "ingress_domain" { value = var.ingress_domain }
 
 variable "max_prefunded_nodes" {
   type = number
   default = 3
 }
 output "max_quorum_nodes" { value = var.max_prefunded_nodes }
+
+output "gcp_project_id" { value = local.gcp_project_id }
+output "gcp_project_region" { value = local.gcp_project_region }
+output "gcp_project_zone" { value = local.gcp_project_zone }
 output "cluster_bucket" { value = "${local.gcp_project_id}-${random_uuid.cluster_bucket.result}" }
 
 # exists to fource re apply when only output values have changed
-resource "null_resource" "n" {}
+resource "null_resource" "nn" {}
 
 locals {
   # All remote state references are via variables with short cuts in the
