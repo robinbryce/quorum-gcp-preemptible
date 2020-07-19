@@ -157,6 +157,9 @@ ETH_RPC vars for namespace prefixes - add if/when we add prefixes
 For both we can use [vars](https://kubectl.docs.kubernetes.io/pages/reference/kustomize.html#vars)
 Which at least limits the changes to one place
 
+But these are very contentions. Creating env vars and patching with overlays
+appears the most reliable. patching via json patch notation is terrible as it
+requires assumptions about list order.
 
 ### Ledger
 
@@ -178,6 +181,16 @@ Things this projet uses vars for
 
 vars are for getting post kustomize transformed values into env's and command
 lines. They can not replace or templatize metadata.
+
+
+To improve on the horrific env patch, we probably need overlays, and may need
+to generate those. Merge patch for objects is easy to understand. For lists its
+tricky and the documentation is not very clear on this *very* necessary usage
+
+https://kubectl.docs.kubernetes.io/pages/app_management/field_merge_semantics.html
+
+To replace a list item in a list that kubernets understands semantics for we
+need to know the patch Key Name for the list items.jk
 
 
 ## Skaffold gotchas

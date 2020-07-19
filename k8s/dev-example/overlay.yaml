@@ -1,0 +1,92 @@
+# main overlay
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adder
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: adderinit
+          env:
+            - name: PROJECT_ID
+              value: ledger-2
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: node
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: quethinit
+          env:
+            - name: BUCKET
+              value: ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: traefik-web
+spec:
+  template:
+    spec:
+      containers:
+        - name: traefik
+          env:
+            - name: ACME_EMAIL
+              value: robinbryce@gmail.com
+# Service accounts - this practically duplicates them here, but is still less
+# configuration than would be required by patchesJson6902. This is one of the
+# stronger motivations for seed templating.
+#
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeip-sa
+  # be explicit, because the GCP SA binding only works for the declared ns
+  namespace: kube-system
+  annotations:
+    iam.gke.io/gcp-service-account: kubeip-sa@ledger-2.iam.gserviceaccount.com
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dns01solver-sa
+  namespace: traefik
+  annotations:
+    iam.gke.io/gcp-service-account: dns01solver-sa@ledger-2.iam.gserviceaccount.com
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quorum-client-sa
+  namespace: caas
+  annotations:
+    iam.gke.io/gcp-service-account: quorum-client-sa@ledger-2.iam.gserviceaccount.com
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quorum-genesis-sa
+  namespace: queth
+  annotations:
+    iam.gke.io/gcp-service-account: quorum-genesis-sa@ledger-2.iam.gserviceaccount.com
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quorum-node-sa
+  namespace: queth
+  annotations:
+    iam.gke.io/gcp-service-account: quorum-node-sa@ledger-2.iam.gserviceaccount.com
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quorum-membership-sa
+  namespace: queth
+  annotations:
+    iam.gke.io/gcp-service-account: quorum-membership-sa@ledger-2.iam.gserviceaccount.com

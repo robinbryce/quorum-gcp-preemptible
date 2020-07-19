@@ -43,19 +43,28 @@ spec:
           volumeMounts:
             - name: acme-certs
               mountPath: /var/run/acme
+          env:
+            - name: ACME_EMAIL
+              value: noreply@quorumpreempt.dev
+          command:
+            - sh
           args:
-            - --api.insecure=true
-            - --entrypoints.web.address=:80
-            - --entrypoints.websecure.address=:443
-            - --entrypoints.ping.address=:10254
-            - --ping.entrypoint=ping
-            - --log.level=DEBUG
-            - --providers.kubernetescrd
-            - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
-            - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=gcloud
-            - --certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
-            - --certificatesresolvers.letsencrypt.acme.email=robinbryce@gmail.com
-            - --certificatesresolvers.letsencrypt.acme.storage=/var/run/acme/acme-staging.json
+            - -cx
+            - |
+              set -e
+              traefik \
+                --api.insecure=true \
+                --entrypoints.web.address=:80 \
+                --entrypoints.websecure.address=:443 \
+                --entrypoints.ping.address=:10254 \
+                --ping.entrypoint=ping \
+                --log.level=DEBUG \
+                --providers.kubernetescrd \
+                --certificatesresolvers.letsencrypt.acme.dnschallenge=true \
+                --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=gcloud \
+                --certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory \
+                --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL} \
+                --certificatesresolvers.letsencrypt.acme.storage=/var/run/acme/acme-staging.json
           ports:
             - name: web
               containerPort: 80
@@ -64,8 +73,6 @@ spec:
             - name: admin
               containerPort: 8080
 
-          env:
-            #- name: GCE_PROJECT
           livenessProbe:
             failureThreshold: 3
             httpGet:

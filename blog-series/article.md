@@ -333,11 +333,17 @@ I have left it at search and replace.
 Bootstraping has an [ancient and venerable](https://www.gnu.org/software/automake/faq/autotools-faq.html#What-does-_002e_002fbootstrap-or-_002e_002fautogen_002esh-do_003f)
  - and not entirely flatering - precedent.
 
+* install skaffold
+* install kustomize
+
+skaffold run
+
+If everything comes up you are all good.
+
 ### Confirm workloads can access the secrets (step 9)
 
 Test workload identity config:
-    kubectl apply -f k8s/ledger/bases/queth/serviceaccount.yaml
-    kubectl apply -f k8s/ledger/bases/queth/namespace.yaml
+
     kubectl run -it \
       --generator=run-pod/v1 \
       --image google/cloud-sdk:slim \
@@ -359,19 +365,6 @@ But ledger-2 will be replaced by your gcp project name
 
 To set the active account, run:
     $ gcloud config set account `ACCOUNT`
-
-
-Clean up with
-
-    kubectl delete -f k8s/ledger/bases/queth/serviceaccount.yaml
-    kubectl delete -f k8s/ledger/bases/queth/namespace.yaml
-
-ack replace qurorumpreempt/ledger-2 the project name in all k8s yamls ...
-(for now, there are better ways to do that with customise, but some edits will
-always be required if using the kustomize model)
-
-* brew install skaffold
-* brew install kustomize
 
 init container with service principal auth to get token.
 use curl to get secret via api (replace quorumpreempt with your gcp project name)
