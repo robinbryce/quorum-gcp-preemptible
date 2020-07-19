@@ -14,7 +14,7 @@ data:
         "static_nodes_blob": "ledger/static-nodes.json",
         "key": "/var/lib/quorum/nodekey",
         "dir": "/var/lib/quorum/node",
-        "bucket": "ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db",
+        "bucket": "quorumpreempt-2c54a054-d234-d92c-e089-d7e0c61a23db",
         "bind": "127.0.0.1",
         "address": "127.0.0.1",
         "port": 30303,

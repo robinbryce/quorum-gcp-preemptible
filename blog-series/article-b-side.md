@@ -3,7 +3,61 @@ Stuff that probably isn't worth writing up but which may be a handy reference
 
 * 2nd envoy to do grpc transcoding https://www.envoyproxy.io/docs/envoy/v1.9.0/configuration/http_filters/grpc_json_transcoder_filter
 
+## What - overview
+
+* quorum
+  * using Cloud KMS (hsm) backed key to wrap the secrets is possible but a
+    *lot* more expensive and requires custom 'unwrap' code on the nodes
+  * can't avoid node keys on disc (clef can fix this?), but can make it
+    transitory and ram based
+  * could (probably) avoid wallet keys on disc - or at least puting them on
+    disc ourselves - but its more work. currently, and this is normal when
+    using go-ethereum based clients - clients all sign and send raw tx's. don't
+    think clef is compatible with this.
+* kubeip, envoy and traefik
+  * it is questionable whether kubeip is the right solution, it results in
+    'un-assigned' ip pricing (>10x expensive but still only 24 cents/day). May
+    be able to achieve the same results by simply assigning the ip to the
+    ingress instance in the tf config - and lose kubeip altogether.
+  * update my cost breakdown shows the static ip is the 2nd most expensive
+    item. it is *more* expensive than some of my vm instances
+
 ## Switching it all over from kubectl to kustomize
+
+[argo cd's thoughts](https://blog.argoproj.io/the-state-of-kubernetes-configuration-management-d8b06c1205)
+[helm-vs-kustomize](https://medium.com/@alexander.hungenberg/helm-vs-kustomize-how-to-deploy-your-applications-in-2020-67f4d104da69)
+
+There is NO AVOIDING some kind of templatization - resitance is futile. But
+helm and its chart repository model don't suit all use cases. Especially not
+rapid developer prototyping: See [argo cd's thoughts](https://blog.argoproj.io/the-state-of-kubernetes-configuration-management-d8b06c1205)
+
+The idea of kustomize is solid, having manifests I can deploy directly is a
+*huge* win. But there are always a few details that need substituting. sed and
+envsubst are venerable and often completely adequate solutions for *seed*
+customization. The get hairy fast when they are embeded in daily workflow.
+
+For this project, we templatize the kustomizations that are most deplendent on
+the repository owner: google project name, deployment domain name. We use
+templating to *seed* the kustomization's in a new repository and *commit* the
+results. A bootstraping step in otherwords. This suites the purpose of a
+developer friendly setup, and doesn't 'over deliver'. This leaves the way open
+for 
+
+To deploy this project on your own google project you need to:
+
+1. Search and replace `ledger-2` with your own project
+2. Search and replace `felixglasgow.com` in all yaml files under k8s.
+
+It will take five minutes, and you can commit the results to your own fork. Done.
+
+I very much like the idea of *seeding* configuration like this using jsonnet to
+generate the initial configuration. [Databricks on jsonnet](https://databricks.com/blog/2017/06/26/declarative-infrastructure-jsonnet-templating-language.html)
+has a lot of good insite here.
+
+Going that road would mean a bootstraping step on fork/clone of the repo. This
+approach has an [ancient and venerable](https://www.gnu.org/software/automake/faq/autotools-faq.html#What-does-_002e_002fbootstrap-or-_002e_002fautogen_002esh-do_003f)
+precedent.
+
 
 * [before you use kustomize](https://itnext.io/before-you-use-kustomize-eaa9529cdd19)
 *
@@ -15,6 +69,115 @@ Stuff that probably isn't worth writing up but which may be a handy reference
   queth
   skaffold.dev/run-id: static
   app.kubernetes.io/managed-by: skaffold
+
+The first time I re-created a project from scratch with a new name, surpisingly
+little of the kubernetes config needed to change. To accomodate a deployment
+domain and a gcp project name change we need these kustomization's:
+
+### Global
+
+All image names need the projects docker image repository. Kustomization works
+great here:
+
+    # k8s/dev-example/kustomization.yaml
+    images:
+      - name: eu.gcr.io/quorumpreempt/shcurl
+        newName: eu.gcr.io/ledger-2/shcurl
+      - name: eu.gcr.io/quorumpreempt/adder
+        newName: eu.gcr.io/ledger-2/adder
+      - name: eu.gcr.io/quorumpreempt/quethraft-init
+        newName: eu.gcr.io/ledger-2/quethraft-init
+      - name: eu.gcr.io/quorumpreempt/nginx-web
+        newName: eu.gcr.io/ledger-2/nginx-web
+
+Replace ledger-2 with your <gcp_project_id>
+
+Service Accounts in all namespaces. This is more cumbersome, but still not
+dreadful. And the result is fairly clear. We need an RFC 6902 json patch for
+each namespace that looks like this:
+
+    - op: replace
+      path: /metadata/annotations/iam.gke.io~1gcp-service-account
+      value: kubeip-sa@ledger-2.iam.gserviceaccount.com
+
+Note that ~1 is an escaped "/"
+
+We also need a patch target specifying each patch in the kustomization.yaml
+
+    patchesJson6902:
+    # ledger sa's
+    - target:
+        group:
+        version: v1
+        kind: ServiceAccount
+        namespace: queth
+        name: quorum-genesis-sa
+      path: quorum-genesis-sa-patch.yaml
+
+Its at this point I started thinking seriously about jsonnet
+
+We use the same approach for the ingress routes. Its a little more tricky
+because we are patching a list item
+
+The routes match for traefik
+
+    apiVersion: traefik.containo.us/v1alpha1
+    kind: IngressRoute
+    metadata:
+      name: ingressroutetls
+    spec:
+      entryPoints:
+        - websecure
+      routes:
+        - match: Host(`queth.quorumpreempt.example.com`) && PathPrefix(`/adder`)
+
+Patch
+
+    - op: replace
+      path: /spec/routes/0/match
+      value: Host(`queth.ledger-2.felixglasgow.com`) && PathPrefix(`/adder`)
+
+Domains will need same if doing wild card tls
+
+
+### CaaS
+
+adder deployment.yaml
+
+init scripts which use a curl rune to collect secrtets directly
+
+secret manager url in init container curl runes
+
+    curl -sS "https://secretmanager.googleapis.com/v1/projects/<gcp_project_id>/secrets/qnode-0-wallet-key/versions/latest:access"
+
+ETH_RPC vars for namespace prefixes - add if/when we add prefixes
+
+    value: http://node-1.<namespacePrfix-queth|queth>.queth:8545
+
+For both we can use [vars](https://kubectl.docs.kubernetes.io/pages/reference/kustomize.html#vars)
+Which at least limits the changes to one place
+
+
+### Ledger
+
+nodeconf.yaml storage bucket name
+
+    "bucket": "ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db",
+
+### North
+
+nginx route
+
+    - match: Host(`queth.ledger-2.felixglasgow.com`) && PathPrefix(`/static`)
+
+Traefik deployment.yaml
+
+    - --certificatesresolvers.letsencrypt.acme.email=robinbryce@gmail.com
+
+Things this projet uses vars for
+
+vars are for getting post kustomize transformed values into env's and command
+lines. They can not replace or templatize metadata.
 
 
 ## Skaffold gotchas

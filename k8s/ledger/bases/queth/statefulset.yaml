@@ -36,7 +36,7 @@ spec:
 
       initContainers:
       - name: quethinit
-        image: eu.gcr.io/ledger-2/quethraft-init
+        image: eu.gcr.io/quorumpreempt/quethraft-init
         volumeMounts:
           - name: quorum-pv
             mountPath: /var/lib/quorum
@@ -47,6 +47,8 @@ spec:
             mountPath: /service/nodeconf.json
             subPath: nodeconf.json
         env:
+          - name: BUCKET
+            value: quorumpreempt
           - name: POD_NAME
             valueFrom:
               fieldRef:
@@ -62,6 +64,7 @@ spec:
           - |
             set -e
             python3 quethraft.py \
+              --bucket=${BUCKET} \
               --gcp-project=ledger-2 \
               --nodedir=/var/lib/quorum/node \
               --address=${POD_NAME}.queth.${NAMESPACE}.svc.cluster.local \

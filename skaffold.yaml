@@ -6,9 +6,8 @@ metadata:
 deploy:
   kustomize:
     paths:
-      - k8s/ledger/bases
-      - k8s/north/bases
-      - k8s/caas/bases
+      # - k8s/bases
+      - k8s/dev-example
   kubectl:
     manifests:
       - k8s/dnsutils/dnsutils.yaml

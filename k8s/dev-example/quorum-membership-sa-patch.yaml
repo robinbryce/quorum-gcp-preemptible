@@ -1,0 +1,3 @@
+- op: replace
+  path: /metadata/annotations/iam.gke.io~1gcp-service-account
+  value: quorum-membership-sa@ledger-2.iam.gserviceaccount.com

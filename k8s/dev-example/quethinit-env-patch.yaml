@@ -1,0 +1,7 @@
+- op: replace
+  # patching env this way, by assuming list indices, is a recipe for disaster.
+  # but avoiding the rabbit hole for now.
+  path: /spec/template/spec/initContainers/0/env/0
+  value:
+    name: BUCKET
+    value: ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db

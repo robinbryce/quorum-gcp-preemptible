@@ -18,7 +18,7 @@ spec:
         cloud.google.com/gke-nodepool: work-pool
       containers:
       - name: "adder"
-        image: eu.gcr.io/ledger-2/adder
+        image: eu.gcr.io/quorumpreempt/adder
         ports:
           - name: http-port
             containerPort: 8081

@@ -18,6 +18,7 @@ variable "max_prefunded_nodes" {
   default = 3
 }
 output "max_quorum_nodes" { value = var.max_prefunded_nodes }
+output "cluster_bucket" { value = "${local.gcp_project_id}-${random_uuid.cluster_bucket.result}" }
 
 locals {
   # All remote state references are via variables with short cuts in the

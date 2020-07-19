@@ -22,9 +22,17 @@ spec:
         emptyDir: {}
       initContainers:
       - name: adderinit
-        image: eu.gcr.io/ledger-2/shcurl
+        image: eu.gcr.io/quorumpreempt/shcurl
         command:
           - sh
+        env:
+          # It seems for kustomize to patch the env, it has to *assume* the
+          # indexes of variables. So take care if casually moving things
+          # around - it is essentially a change of public interface.
+          - name: PROJECT_ID
+            # PROJECT_ID rather than GCP_PROJECT_ID so as not to collide with
+            # magic google var names
+            value: quorumpreempt
         args:
           - -cx
           - |
@@ -32,7 +40,7 @@ spec:
               http://metadata/computeMetadata/v1/instance/service-accounts/default/token | \
               jq -r .access_token)
             [ -n "$TOKEN" ] || exit 1
-            curl -sS "https://secretmanager.googleapis.com/v1/projects/ledger-2/secrets/qnode-0-wallet-key/versions/latest:access" \
+            curl -sS "https://secretmanager.googleapis.com/v1/projects/${PROJECT_ID}/secrets/qnode-0-wallet-key/versions/latest:access" \
               --request "GET" \
               --header "authorization: Bearer ${TOKEN}" \
               --header "content-type: application/json" | \
@@ -44,7 +52,7 @@ spec:
 
       containers:
       - name: "adder"
-        image: eu.gcr.io/ledger-2/adder
+        image: eu.gcr.io/quorumpreempt/adder
         ports:
           - name: grpc-port
             containerPort: 9091

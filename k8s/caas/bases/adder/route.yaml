@@ -6,7 +6,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`queth.ledger-2.felixglasgow.com`) && PathPrefix(`/adder`)
+    - match: Host(`queth.quorumpreempt.example.com`) && PathPrefix(`/adder`)
       kind: Rule
       services:
         - name: adder-http1

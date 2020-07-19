@@ -1,0 +1,94 @@
+# This should be edited or used as starting point for your own
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - ../bases
+
+images:
+  - name: eu.gcr.io/quorumpreempt/shcurl
+    newName: eu.gcr.io/ledger-2/shcurl
+  - name: eu.gcr.io/quorumpreempt/adder
+    newName: eu.gcr.io/ledger-2/adder
+  - name: eu.gcr.io/quorumpreempt/quethraft-init
+    newName: eu.gcr.io/ledger-2/quethraft-init
+  - name: eu.gcr.io/quorumpreempt/nginx-web
+    newName: eu.gcr.io/ledger-2/nginx-web
+
+patchesJson6902:
+# env patches (these seem like a terrible idea - see the patch for why)
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    namespace: caas
+    name: adder
+  path: adder-env-patch.yaml
+- target:
+    group: apps
+    version: v1
+    kind: StatefulSet
+    namespace: queth
+    name: node
+  path: quethinit-env-patch.yaml
+# route patches - these seem to work ok.
+- target:
+    group: traefik.containo.us
+    version: v1alpha1
+    kind: IngressRoute
+    namespace: caas
+    name: ingressroutetls
+  path: caas-adder-route-patch.yaml
+- target:
+    group: traefik.containo.us
+    version: v1alpha1
+    kind: IngressRoute
+    namespace: nginx-web
+    name: ingressroutetls
+  path: north-nginx-route-patch.yaml
+
+# service account patches - a little verbose but basically sound
+# ledger sa's
+- target:
+    group:
+    version: v1
+    kind: ServiceAccount
+    namespace: queth
+    name: quorum-genesis-sa
+  path: quorum-genesis-sa-patch.yaml
+- target:
+    group:
+    version: v1
+    kind: ServiceAccount
+    namespace: queth
+    name: quorum-node-sa
+  path: quorum-node-sa-patch.yaml
+- target:
+    group:
+    version: v1
+    kind: ServiceAccount
+    namespace: queth
+    name: quorum-membership-sa
+  path: quorum-membership-sa-patch.yaml
+# caas sa's
+- target:
+    group:
+    version: v1
+    kind: ServiceAccount
+    namespace: caas
+    name: quorum-client-sa
+  path: quorum-client-sa-patch.yaml
+# north sa's
+- target:
+    group:
+    version: v1
+    kind: ServiceAccount
+    namespace: kube-system
+    name: kubeip-sa
+  path: kubeip-sa-patch.yaml
+- target:
+    group:
+    version: v1
+    kind: ServiceAccount
+    namespace: traefik
+    name: dns01solver-sa
+  path: dns01solver-sa-patch.yaml

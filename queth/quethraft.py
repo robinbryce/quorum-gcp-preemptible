@@ -160,6 +160,9 @@ def load_config(args):
     if args.nodedir is not None:
         conf.dir = args.nodedir
 
+    if args.bucket is not None:
+        conf.bucket = args.bucket
+
     conf.dir = Path(confdir.joinpath(conf.dir))
     conf.key = Path(confdir.joinpath(conf.key))
     return conf
@@ -403,6 +406,7 @@ def arg_parser(args=None):
 
     top.set_defaults(func=lambda a: print("see sub commands in help"))
     top.add_argument("-p", "--gcp-project", default="quorumpreempt")
+    top.add_argument("--bucket", default=None)
     top.add_argument(
         "--token", help="provide bearer token for gcp api access")
     top.add_argument(

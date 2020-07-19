@@ -27,37 +27,22 @@ Cloud Load balancing with 5 forwarding rules and 8 GB of ingress adds £18 PCM
 
 ## What - overview
 
-* quorum deployment with raft consensus and optional tessera (private transactions),
-  with support for addition and removal of nodes at will.
+* quorum deployment with raft consensus, with support for live addition of nodes.
   * raft is convenient and simple and scales 'enough' for development and small
     networks.
-  * might leave tessera as follow up article.
+  * leave tessera as follow up article.
 * wallet keys held in GCP security-manager secrets access controled using GCP
   principals.
-  * using Cloud KMS (hsm) backed key to wrap the secrets is possible but a
-    *lot* more expensive and requires custom 'unwrap' code on the nodes
-  * can't avoid node keys on disc (clef can fix this?), but can make it
-    transitory and ram based
-  * could (probably) avoid wallet keys on disc - or at least puting them on
-    disc ourselves - but its more work. currently, and this is normal when
-    using go-ethereum based clients - clients all sign and send raw tx's. don't
-    think clef is compatible with this.
 * Use of Google Cloud NAT, Workload Identity, Secrets Manager
-* Use of kubeip and traefik for ingress to web access layer workloads
-  * it is questionable whether kubeip is the right solution, it results in
-    'un-assigned' ip pricing (>10x expensive but still only 24 cents/day). May
-    be able to achieve the same results by simply assigning the ip to the
-    ingress instance in the tf config - and lose kubeip altogether.
-  * update my cost breakdown shows the static ip is the 2nd most expensive
-    item. it is *more* expensive than some of my vm instances
+* kubeip for ingress ip assignment
+* envoy as a simple loadbalancer and rate limiter
+* traefik for lets encrypt integration and routing to application workloads
 * go-ethereum service exposing contract functions as rest endpoints (hello CaaS)
 * terraform cloud hosted and git controled cluster configuration.
-* kubernetes pod authorisation using k8s service accounts bound to GCP
-  principals using workload identity
-  principals for kubernetes pod authorisation
+* All kubernetes workload authorisation using k8s service accounts bound to GCP
+  principals using google workload identity
 * blob (bucket) storage for dlt configuration (genesis and static-nodes.json)
-* blob (bucket) storage for tracking deployed contracts and their abi's
-* skaffold for build/deploy/test
+* skaffold  and kustomize for build/deploy
 
 ## Key modifications from referenced 'cheap cluster' article
 * use workload identity for all pod auth: kubeip, blob storage, cloud dns01 challenges etc
@@ -85,8 +70,10 @@ To get there we need to complete the following
 5. Create a terraform workspace for the ledger and deploy the ledger resources
 6. Install the google cloud tooling needed to generate the node secrets (docker
    image is tbd)
-7. Create the initial dlt keys, wallets and other secrets.
-8. Deploy the kubernets manififests (skaffold)
+7. Secret Creation - dlt node keys, wallets and other secrets.
+8. Bootstrapping (minor search and replace) the kubernetes manififests - its easier this way.
+9. Confirm workloads can access the secrets
+10. Deploy the kubernets manififests with skaffold
 
 ### Terraform Cloud Cluster (steps 1 - 4)
 
@@ -310,12 +297,43 @@ Run:
     gcloud auth application-default login
     task nodekeys
 
-### Confirming secret access in the workloads
+### Bootstrapping the kubernetes manififests (step 8)
 
+There is NO AVOIDING some kind of templatization - resitance is futile. But
+helm and its chart repository model don't suit all use cases. Especially not
+rapid developer prototyping: See [argo cd's thoughts](https://blog.argoproj.io/the-state-of-kubernetes-configuration-management-d8b06c1205)
 
-Edit
-    k8s/ledger/bases/queth/serviceaccount.yaml
-    correcting all the gcp-service-account anotations :-/
+The idea of kustomize is solid, having manifests I can deploy directly is a
+*huge* win. But there are always a few details that need substituting. sed and
+envsubst are venerable and often completely adequate solutions for *seed*
+customization. The get hairy fast when they are embeded in daily workflow.
+
+To deploy this project on your own google project you need to:
+
+1. Copy k8s/dev-example to k8s/dev
+2. Edit the skaffold.yaml to point kustomize at dev rather than dev-example
+3. In all yamls in k8s/dev search and replace `ledger-2` with your own project
+4. In all yamls in k8s/dev Search and replace `example.com` with your domain.
+5. In quethinit-env-patch.yaml set the value for the BUCKET variable to the 
+   cluster_bucket output from your ledger terraform apply
+
+It will take five minutes, and you can commit the results to your own fork. Done.
+
+I very much like the idea of *seeding* configuration like this using jsonnet to
+generate the initial configuration. [Databricks on jsonnet](https://databricks.com/blog/2017/06/26/declarative-infrastructure-jsonnet-templating-language.html)
+has a lot of good insite here.  [go-jsonnet](https://github.com/google/go-jsonnet)
+
+For this project, this would mean we templatize the kustomizations that are
+most deplendent on the repository owner: google project name, deployment domain
+name. And then generating the repository owner specific kustomizations once on
+initial fork/clone. This suites the purpose of a developer friendly setup, and
+doesn't 'over deliver', but the choices are unlikely to be right for all. So
+I have left it at search and replace.
+
+Bootstraping has an [ancient and venerable](https://www.gnu.org/software/automake/faq/autotools-faq.html#What-does-_002e_002fbootstrap-or-_002e_002fautogen_002esh-do_003f)
+ - and not entirely flatering - precedent.
+
+### Confirm workloads can access the secrets (step 9)
 
 Test workload identity config:
     kubectl apply -f k8s/ledger/bases/queth/serviceaccount.yaml
@@ -341,6 +359,12 @@ But ledger-2 will be replaced by your gcp project name
 
 To set the active account, run:
     $ gcloud config set account `ACCOUNT`
+
+
+Clean up with
+
+    kubectl delete -f k8s/ledger/bases/queth/serviceaccount.yaml
+    kubectl delete -f k8s/ledger/bases/queth/namespace.yaml
 
 ack replace qurorumpreempt/ledger-2 the project name in all k8s yamls ...
 (for now, there are better ways to do that with customise, but some edits will

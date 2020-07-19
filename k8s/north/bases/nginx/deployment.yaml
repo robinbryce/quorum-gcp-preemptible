@@ -21,7 +21,7 @@ spec:
         cloud.google.com/gke-nodepool: work-pool
       containers:
         - name: "nginx-web"
-          image: eu.gcr.io/ledger-2/nginx-web:latest
+          image: eu.gcr.io/quorumpreempt/nginx-web
           ports:
             - name: http
               containerPort: 80
