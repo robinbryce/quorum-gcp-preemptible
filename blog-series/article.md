@@ -109,36 +109,30 @@ All can be found at APIs & Services / API Library
 
 Create an access key on the for terraform cloud for the default service account
 
-Find the Compute Engine default service account. 
-IAM & Admin / Service Accounts / Compute Engine Default Service account -> create
-key -> create as json save to local disc - it will be stored in the terraform
-workspace as a sensitive value (or make your own auth choices)
+Find the Compute Engine default service account.
+
+IAM & Admin / Service Accounts -> Compute Engine Default Service account ->
+create key -> create as json save to local disc
+
+It will be stored in the terraform workspace as a sensitive value (or make your
+own auth choices)
 
 Grant permission to the default compute engine service account for creating iam
-roles and asigning policies. For a development focused setup, simply granting
-Editor to the service account is a time saver though there are 
+roles and asigning policies.
 
 IAM & Admin edit compute engine default sa
 
 For this article the following roles were enabled. There is likely a tighter
 set.
 
-Add another role ->
-    Editor
-        Compute Network Admin
-            compute.networks.create
-        Compute Security Admin
-            compute.firewalls.create
-        DNS Administrator
-            zone creation
-        Kubernetes Engine Viewer,
-    Service Account Admin,
-    Secret Manager Admin,
-    Project IAM Admin,
-    Role Administrator
+IAM & Admin / IAM -> Compute Engine Default Service account -> Add another role ->
+(pen icon to right)
 
-And one more that I can't figure out to grant google_project_service the
-permission to create "cloudresourcemanager.googleapis.com"
+* Editor
+* Service Account Admin,
+* Secret Manager Admin,
+* Project IAM Admin,
+* Role Administrator
 
 tip: missing permissions problems use IAM / Roles and filter by permissions to
 find out which roles have the permisions.
@@ -146,7 +140,6 @@ find out which roles have the permisions.
 best intro article
 https://cloud.google.com/community/tutorials/getting-started-on-gcp-with-terraform
 
-(pen icon to right)
 
 Create a terraform io account or login.
 

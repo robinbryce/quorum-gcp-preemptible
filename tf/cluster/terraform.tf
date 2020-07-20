@@ -6,8 +6,7 @@ terraform {
   backend "remote" {
     organization = "robinbryce"
     workspaces {
-      # name = "consortia-quorum-preempt"
-      name = "ledger-2"
+      name = "ledger-0"
     }
   }
 }
