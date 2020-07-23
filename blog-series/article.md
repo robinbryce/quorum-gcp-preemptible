@@ -53,11 +53,11 @@ Cloud Load balancing with 5 forwarding rules and 8 GB of ingress adds £18 PCM
 ## Deploy the project
 
 There is quite a bit of devops to get through to arive at something that could
-form the basis of a production deploy. At the end of this we will be able call,
-in a controled way, specific contract functions on our ledger, over the public
-internet.  Access will be through a standard looking rest api serverd over tls.
-Lets Encrypt will be used for certificates and Envoy will be acting as a
-'cheap' load balancer and protecting our workloads from excessive demands.
+form the basis of a production deploy. At the end of this we will have access
+to contract functions through a rest api. Hosted on a dns name of our choosing
+with tls certs from [Let's Encrypt](https://letsencrypt.org/). Envoy will be
+acting as a 'cheap' load balancer and protecting our workloads from excessive
+demands.
 
 To get there we need to complete the following
 
@@ -70,12 +70,34 @@ To get there we need to complete the following
 5. Create a terraform workspace for the ledger and deploy the ledger resources
 6. Install the google cloud tooling needed to generate the node secrets (docker
    image is tbd)
-7. Secret Creation - dlt node keys, wallets and other secrets.
-8. Bootstrapping with terraform output and jsonnet
-9. Confirm workloads can access the secrets
-10. Deploy the kubernets manififests with skaffold
+7. Create the secrets for operating the ledger node keys, service wallets and so on .
+8. Bootstrap the kubernetes [kustomizations](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
+   with json formatted [terraform output](https://www.terraform.io/docs/commands/output.html) and jsonnet
+9. Confirm our [Google Workload Identities](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+   are working for our pods
+10. Deploy the kubernets manififests with [skaffold](https://skaffold.dev/)
 
 ### Terraform Cloud Cluster (steps 1 - 4)
+
+Our base cluster configuration stays close to [how-to-kubernetes-for-cheap](https://dev.to/verkkokauppacom/how-to-kubernetes-for-cheap-on-google-cloud-1aei) but adds this to the google_container_cluster resource
+
+    workload_identity_config {
+      identity_namespace = "${var.project}.svc.id.goog"
+    }
+
+This is all it takes to enable [Google Workload Identities](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) for the cluster.
+
+You will need to edit tf/cluster/terraform.tf where it has
+
+    backend "remote" {
+      organization = "robinbryce"
+      workspaces {
+        name = "ledger-0"
+      }
+    }
+
+Change that to the organisation and workspace name you chose for your terraform
+cloud project
 
 This will give you a cluster defined by terraform files in your git repository.
 Commits to that repository will be how you change and update the cluster
@@ -100,10 +122,11 @@ Sign up for or login to google cloud.
 
 * Create an empty GCP project, set the project id explicitly so that it matches
   the project name (just because it is fewer names to keep track of)
-* Enable the compute engine api
-* Enable the service usage api (it may be by default)
-* Enable Cloud DNS api
+* Enable the Compute Engine API
 * Enable Kubernetes Engine API
+* Enable Cloud DNS API
+* Enable Secrets Manager API
+* Enable the Service Usage API (it may be by default)
 
 All can be found at APIs & Services / API Library
 
@@ -211,14 +234,27 @@ If all is well
 
 The cluster will now create automatically.
 
+After completion we have the following instance setup
+
+* 1x g1-small NOT pre-emptible for ingress
+* 3x n1-standard-2 pre-emptible for workloads
+
+We have a single static ip address. And this will cost 10x more money while it
+is 'floating' - about the same PCM as one of the VM instances! Once it gets
+assigned to an instance it isn't so eyewaterningly expensive.
+
+We also have NAT and a firewall config that permits inbound connection son 80
+and 443.
+
 
 ### Deploy the ledger cluster resources (step 5)
 
 As before for the cluster workspace
-Create a workspace and link it to your fork of the repository.
-* Set the name of the workspace. It can be convenient if the ledger workspace
-  is related to the cluster workspace name
-* Set the terraform working directory to ledger
+* Create a workspace and link it to your fork of the repository.
+  * Set the name of the workspace. It can be convenient if the ledger workspace
+    is related to the cluster workspace name
+  * Advanced Options
+    * Set the terraform working directory to ledger
 * Enable 'only trigger runs when files in specified paths change' (it should
     select the working directory by default)
 * Create the workspace
@@ -231,7 +267,36 @@ Configure variables
 
 * ingress_domain your.domain.com
 * cluster_workspace the workspace of the cluster
-* Add (the same) GOOGLE_CLOUD_KEYFILE_JSON as an environment variable
+* Add (the same) GOOGLE_CLOUD_KEYFILE_JSON as an environment variable (mark it
+  sensitive)
+
+The gcp_project_id region and zone are consumed from the cluster workspace as
+[remote state])https://www.terraform.io/docs/providers/terraform/d/remote_state.html_.
+
+Edit tf/terraform.tf for your workspace
+
+    backend "remote" {
+      organization = "robinbryce"
+      workspaces {
+        name = "ledger-0-ledger"
+      }
+    }
+
+Then do
+
+    cd tf/ledger
+    terraform init
+    terraform plan
+
+Back on terraform cloud, configure the run trigger to notice when the cluster
+plan has been applied successfuly. This will queue a ledger plan but, regardles
+of your auto-apply setting, it will require manual approval to run.
+
+This step creates a storage cluster bucket, a bunch of service accounts bound
+to workload identities and a colletion of *empty* secrets. It also sorts out a
+dns zone for your nonminated domain name - we need a domain so we can include
+traefik / lets encrypt in the tutorial. We create the secrets empty (more on
+why later) and assign the IAM's only.
 
 #### note on remote state and outputs being updated
 
@@ -288,7 +353,7 @@ in the state file.
 Run:
 
     gcloud auth application-default login
-    task nodekeys
+    task ensuresecrets
 
 ### Bootstrapping the kubernetes manififests (step 8)
 
@@ -334,12 +399,12 @@ sets jsonnet appart is how cleanly it integrates with `terraform output -json`
 1. Get the terraform output as json
 
     cd tf/ledger
-    terraform output -json ../../k8s/dev-example/ledger.tf.out.json
+    terraform output -json | tee ../../k8s/dev-example/ledger.tf.out.json
 
 2. Render the kustomize overlay for *your* terraform output.
 
     cd k8s/dev-example
-    jsonnet -y overlay.jsonnet
+    jsonnet -y overlay.jsonnet -o overlay.json
 
 The dev-example directory has all the outputs checked in, examine the diff to
 see whats changed.
@@ -386,6 +451,14 @@ results to your own fork. BUt it is a task that gets old super fast.
 * install skaffold
 * install kustomize
 
+Ah so there is *one* bit of search and replace before running skaffold - we
+need to set the image repository names to match the project. For lines like
+
+  - image: eu.gcr.io/ledger-0/nginx-web
+    context: nginx-alpine
+
+Set your gcp_project_id after eu.gcr.io/
+
 skaffold run
 
 If everything comes up you are all good.
@@ -394,11 +467,7 @@ If everything comes up you are all good.
 
 Test workload identity config:
 
-    kubectl run -it \
-      --generator=run-pod/v1 \
-      --image google/cloud-sdk:slim \
-      --serviceaccount quorum-node-sa \
-      --namespace queth workload-identity-test
+    kubectl run -it --generator=run-pod/v1 --image google/cloud-sdk:slim --serviceaccount quorum-node-sa --namespace queth workload-identity-test
 
 At the prompt enter
 
@@ -410,7 +479,7 @@ You should see
     ACTIVE  ACCOUNT
     *       quorum-node-sa@ledger-2.iam.gserviceaccount.com
 
-But ledger-2 will be replaced by your gcp project name
+But ledger-2 will be replaced by your ${GCP_PROJECT_ID}
 
 
 To set the active account, run:
@@ -420,7 +489,7 @@ init container with service principal auth to get token.
 use curl to get secret via api (replace quorumpreempt with your gcp project name)
 
     TOKEN=$(curl -s -H 'Metadata-Flavor: Google' http://metadata/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
-    curl "https://secretmanager.googleapis.com/v1/projects/quorumpreempt/secrets/qnode-0-key/versions/1:access" \
+    curl "https://secretmanager.googleapis.com/v1/projects/${GCP_PROJECT_ID}/secrets/qnode-0-key/versions/1:access" \
         --request "GET" \
         --header "authorization: Bearer ${TOKEN}" \
         --header "content-type: application/json"

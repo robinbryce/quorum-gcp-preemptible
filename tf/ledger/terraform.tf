@@ -6,7 +6,7 @@ terraform {
   backend "remote" {
     organization = "robinbryce"
     workspaces {
-      name = "ledger-2-ledger"
+      name = "ledger-0-ledger"
     }
   }
 }

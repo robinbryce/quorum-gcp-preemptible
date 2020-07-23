@@ -6,7 +6,7 @@ vars:
 
 tasks:
 
-  nodekeys:
+  ensuresecrets:
     desc: ensure all node secrets exist in gcp
     cmds:
       - |

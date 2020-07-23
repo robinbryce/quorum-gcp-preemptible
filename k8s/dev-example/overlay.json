@@ -4,7 +4,7 @@
    "kind": "ServiceAccount",
    "metadata": {
       "annotations": {
-         "iam.gke.io/gcp-service-account": "kubeip-sa@ledger-2.iam.gserviceaccount.com"
+         "iam.gke.io/gcp-service-account": "kubeip-sa@ledger-0.iam.gserviceaccount.com"
       },
       "name": "kubeip-sa",
       "namespace": "kube-system"
@@ -16,7 +16,7 @@
    "kind": "ServiceAccount",
    "metadata": {
       "annotations": {
-         "iam.gke.io/gcp-service-account": "dns01solver-sa@ledger-2.iam.gserviceaccount.com"
+         "iam.gke.io/gcp-service-account": "dns01solver-sa@ledger-0.iam.gserviceaccount.com"
       },
       "name": "dns01solver-sa",
       "namespace": "traefik"
@@ -28,7 +28,7 @@
    "kind": "ServiceAccount",
    "metadata": {
       "annotations": {
-         "iam.gke.io/gcp-service-account": "quorum-client-sa@ledger-2.iam.gserviceaccount.com"
+         "iam.gke.io/gcp-service-account": "quorum-client-sa@ledger-0.iam.gserviceaccount.com"
       },
       "name": "quorum-client-sa",
       "namespace": "caas"
@@ -40,7 +40,7 @@
    "kind": "ServiceAccount",
    "metadata": {
       "annotations": {
-         "iam.gke.io/gcp-service-account": "quorum-node-sa@ledger-2.iam.gserviceaccount.com"
+         "iam.gke.io/gcp-service-account": "quorum-node-sa@ledger-0.iam.gserviceaccount.com"
       },
       "name": "quorum-node-sa",
       "namespace": "queth"
@@ -52,7 +52,7 @@
    "kind": "ServiceAccount",
    "metadata": {
       "annotations": {
-         "iam.gke.io/gcp-service-account": "quorum-membership-sa@ledger-2.iam.gserviceaccount.com"
+         "iam.gke.io/gcp-service-account": "quorum-membership-sa@ledger-0.iam.gserviceaccount.com"
       },
       "name": "quorum-membership-sa",
       "namespace": "queth"
@@ -64,7 +64,7 @@
    "kind": "ServiceAccount",
    "metadata": {
       "annotations": {
-         "iam.gke.io/gcp-service-account": "quorum-genesis-sa@ledger-2.iam.gserviceaccount.com"
+         "iam.gke.io/gcp-service-account": "quorum-genesis-sa@ledger-0.iam.gserviceaccount.com"
       },
       "name": "quorum-genesis-sa",
       "namespace": "queth"
@@ -85,7 +85,7 @@
                   "env": [
                      {
                         "name": "PROJECT_ID",
-                        "value": "ledger-2"
+                        "value": "ledger-0"
                      }
                   ],
                   "name": "adderinit"
@@ -135,7 +135,11 @@
                   "env": [
                      {
                         "name": "BUCKET",
-                        "value": "ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db"
+                        "value": "ledger-0-a8ddd922-9a47-a22f-a41d-7eae83b5d7cd"
+                     },
+                     {
+                        "name": "PROJECT_ID",
+                        "value": "ledger-0"
                      }
                   ],
                   "name": "quethinit"

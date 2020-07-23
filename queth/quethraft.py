@@ -1,7 +1,4 @@
 """quorum node initialisaion"""
-
-
-
 from contextlib import contextmanager
 from collections import namedtuple
 from datetime import datetime
@@ -12,6 +9,9 @@ import json
 import os
 import random
 import requests
+# import logging
+# logging.basicConfig(level=logging.DEBUG) this causes requests to log requests
+
 import subprocess as sp
 import sys
 from urllib.parse import urlparse, parse_qs

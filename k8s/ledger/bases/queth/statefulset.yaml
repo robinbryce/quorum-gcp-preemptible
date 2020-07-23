@@ -47,6 +47,8 @@ spec:
             mountPath: /service/nodeconf.json
             subPath: nodeconf.json
         env:
+          - name: PROJECT_ID
+            value: quorumpreempt
           - name: BUCKET
             value: quorumpreempt
           - name: POD_NAME
@@ -65,7 +67,7 @@ spec:
             set -e
             python3 quethraft.py \
               --bucket=${BUCKET} \
-              --gcp-project=ledger-2 \
+              --gcp-project=${PROJECT_ID} \
               --nodedir=/var/lib/quorum/node \
               --address=${POD_NAME}.queth.${NAMESPACE}.svc.cluster.local \
               --nodekey-secretname=qnode-${POD_NAME#*-}-key \
