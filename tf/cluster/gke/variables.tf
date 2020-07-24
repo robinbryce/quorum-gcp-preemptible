@@ -1,7 +1,9 @@
 variable "project" {
   type = string
 }
-
+variable "gcp_project_name" {
+  type = string
+}
 variable "zone" {
   type = string
 }
@@ -15,10 +17,6 @@ variable "region" {
 }
 
 variable "location" {
-  type = string
-}
-
-variable "gcp_project_id" {
   type = string
 }
 

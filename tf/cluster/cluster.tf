@@ -3,6 +3,11 @@ variable "gcp_project_id" {
     default = "quorumpreempt"
 }
 output "gcp_project_id" { value = var.gcp_project_id }
+variable "gcp_project_name" {
+    type = string
+    default = "quorumpreempt"
+}
+output "gcp_project_name" { value = var.gcp_project_name }
 
 variable "gcp_project_region" {
   type = string
@@ -34,7 +39,7 @@ resource "null_resource" "n" {}
 module "cluster" {
 
   project                             = var.gcp_project_id
-  gcp_project_id                      = var.gcp_project_id
+  gcp_project_name                    = var.gcp_project_name
   source                              = "./gke"
   region                              = var.gcp_project_region
   location                            = var.gcp_project_zone
@@ -62,13 +67,14 @@ module "cluster" {
       initial_node_count = 1
       min_node_count     = 1
       max_node_count     = 1
+      # Can make this !preemptible for reliability but for development its not worth it
       preemptible        = true
       auto_repair        = true
       auto_upgrade       = false
       disk_size_gb       = 10
       disk_type          = "pd-standard"
       image_type         = "COS"
-      service_account    = "kluster-serviceaccount@${var.gcp_project_id}.iam.gserviceaccount.com"
+      service_account    = "kluster-serviceaccount@${var.gcp_project_name}.iam.gserviceaccount.com"
     }
     work-pool = {
       machine_type       = "n1-standard-2" # $$$
@@ -81,7 +87,7 @@ module "cluster" {
       disk_size_gb       = 64
       disk_type          = "pd-standard"
       image_type         = "COS"
-      service_account    = "kluster-serviceaccount@${var.gcp_project_id}.iam.gserviceaccount.com"
+      service_account    = "kluster-serviceaccount@${var.gcp_project_name}.iam.gserviceaccount.com"
 
     }
   }

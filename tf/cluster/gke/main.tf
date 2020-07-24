@@ -24,7 +24,7 @@ resource "google_project_service" "cloudresourcemanager" {
 }
 
 resource "google_project_service" "iam" {
-  project    = var.project
+  project = var.project
   service    = "iam.googleapis.com"
   depends_on = [google_project_service.cloudresourcemanager]
 
@@ -32,7 +32,7 @@ resource "google_project_service" "iam" {
 }
 
 resource "google_project_service" "container" {
-  project    = var.project
+  project = var.project
   service    = "container.googleapis.com"
   depends_on = [google_project_service.iam]
 
