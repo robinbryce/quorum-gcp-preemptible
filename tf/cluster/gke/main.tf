@@ -10,11 +10,6 @@ output "static_ingress" {
 }
 
 data "google_client_config" "provider" {}
-data "google_container_cluster" "quorumpreempt" {
-  name = var.cluster_name
-  location = var.location
-  project = var.project
-}
 
 resource "google_project_service" "cloudresourcemanager" {
   project = var.project
