@@ -74,7 +74,7 @@ module "cluster" {
       disk_size_gb       = 10
       disk_type          = "pd-standard"
       image_type         = "COS"
-      service_account    = "kluster-serviceaccount@${var.gcp_project_name}.iam.gserviceaccount.com"
+      service_account    = "kluster-serviceaccount@${var.gcp_project_id}.iam.gserviceaccount.com"
     }
     work-pool = {
       machine_type       = "n1-standard-2" # $$$
@@ -87,7 +87,7 @@ module "cluster" {
       disk_size_gb       = 64
       disk_type          = "pd-standard"
       image_type         = "COS"
-      service_account    = "kluster-serviceaccount@${var.gcp_project_name}.iam.gserviceaccount.com"
+      service_account    = "kluster-serviceaccount@${var.gcp_project_id}.iam.gserviceaccount.com"
 
     }
   }

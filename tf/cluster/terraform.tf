@@ -6,7 +6,7 @@ terraform {
   backend "remote" {
     organization = "robinbryce"
     workspaces {
-      name = "quorumpreempt-robinbryce-cluster"
+      name = "quorumpreempt-284308-cluster"
     }
   }
 }

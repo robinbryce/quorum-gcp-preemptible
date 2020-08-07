@@ -12,7 +12,7 @@ output "static_ingress" {
 data "google_client_config" "provider" {}
 
 resource "google_project_service" "cloudresourcemanager" {
-  project = var.gcp_project_name
+  project = var.project
   service = "cloudresourcemanager.googleapis.com"
 
   disable_dependent_services = true
