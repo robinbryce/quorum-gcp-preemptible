@@ -39,6 +39,6 @@ resource "google_project_iam_member" "iam_member_kluster" {
 
   role       = "projects/${var.project}/roles/kluster"
   project    = var.project
-  member     = "serviceAccount:kluster-serviceaccount@${var.gcp_project_id}.iam.gserviceaccount.com"
+  member     = "serviceAccount:kluster-serviceaccount@${var.project}.iam.gserviceaccount.com"
   depends_on = [google_service_account.kluster]
 }
