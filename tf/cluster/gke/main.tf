@@ -34,11 +34,6 @@ resource "google_project_service" "container" {
   disable_dependent_services = true
 }
 
-resource "google_container_registry" "container_registry" {
-  project = var.project
-  location = "EU"
-}
-
 resource "google_container_cluster" "k8s" {
   provider           = google-beta
   name               = var.cluster_name
