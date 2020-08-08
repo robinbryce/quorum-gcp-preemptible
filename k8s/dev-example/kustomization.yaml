@@ -6,13 +6,13 @@ bases:
 
 images:
   - name: eu.gcr.io/quorumpreempt/shcurl
-    newName: eu.gcr.io/ledger-0/shcurl
+    newName: eu.gcr.io/quorumpreempt-284308/shcurl
   - name: eu.gcr.io/quorumpreempt/adder
-    newName: eu.gcr.io/ledger-0/adder
+    newName: eu.gcr.io/quorumpreempt-284308/adder
   - name: eu.gcr.io/quorumpreempt/quethraft-init
-    newName: eu.gcr.io/ledger-0/quethraft-init
+    newName: eu.gcr.io/quorumpreempt-284308/quethraft-init
   - name: eu.gcr.io/quorumpreempt/nginx-web
-    newName: eu.gcr.io/ledger-0/nginx-web
+    newName: eu.gcr.io/quorumpreempt-284308/nginx-web
 
 patchesStrategicMerge:
   #- overlay.yaml

@@ -2,7 +2,7 @@
   "cluster_bucket": {
     "sensitive": false,
     "type": "string",
-    "value": "ledger-2-2c54a054-d234-d92c-e089-d7e0c61a23db"
+    "value": "quorumpreempt-284308-d6e2b911-2a9a-3b58-cab6-3c9e0f979fcd"
   },
   "cluster_name": {
     "sensitive": false,
@@ -12,12 +12,12 @@
   "cluster_workspace": {
     "sensitive": false,
     "type": "string",
-    "value": "ledger-2"
+    "value": "quorumpreempt-cluster"
   },
   "gcp_project_id": {
     "sensitive": false,
     "type": "string",
-    "value": "ledger-2"
+    "value": "quorumpreempt-284308"
   },
   "gcp_project_region": {
     "sensitive": false,
@@ -32,7 +32,7 @@
   "ingress_domain": {
     "sensitive": false,
     "type": "string",
-    "value": "felixglasgow.com"
+    "value": "quorumpreempt.dev"
   },
   "max_quorum_nodes": {
     "sensitive": false,

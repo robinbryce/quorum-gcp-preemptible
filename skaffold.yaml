@@ -1,48 +1,36 @@
-apiVersion: skaffold/v2beta5
+apiVersion: skaffold/v2beta6
 kind: Config
 metadata:
-  name: quorum-gcp-preemptible
-
-deploy:
-  kustomize:
-    paths:
-      # - k8s/bases
-      - k8s/dev-example
-  kubectl:
-    manifests:
-      - k8s/dnsutils/dnsutils.yaml
-
+  name: quorumpreempt
 build:
   artifacts:
-  - image: eu.gcr.io/ledger-2/adder-builder
+  - image: eu.gcr.io/quorumpreempt-284308/adder-builder
     context: adder
     docker:
-      dockerfile:
-        Dockerfile-builder
-  - image: eu.gcr.io/ledger-2/adder
+      dockerfile: Dockerfile-builder
+  - image: eu.gcr.io/quorumpreempt-284308/adder
     context: adder
     docker:
-      dockerfile:
-        Dockerfile
-  - image: eu.gcr.io/ledger-2/shcurl
+      dockerfile: Dockerfile
+  - image: eu.gcr.io/quorumpreempt-284308/shcurl
     docker:
-      dockerfile:
-        shcurl/Dockerfile
-  - image: eu.gcr.io/ledger-2/nginx-web
+      dockerfile: shcurl/Dockerfile
+  - image: eu.gcr.io/quorumpreempt-284308/nginx-web
     context: nginx-alpine
-  - image: eu.gcr.io/ledger-2/quethraft-init
+  - image: eu.gcr.io/quorumpreempt-284308/quethraft-init
     context: queth
-    sync:
-      infer:
+    sync: {}
     docker:
-      dockerfile:
-        Dockerfile-init
-  - image: eu.gcr.io/ledger-2/queth
+      dockerfile: Dockerfile-init
+  - image: eu.gcr.io/quorumpreempt-284308/queth
     context: queth
-    sync:
-      infer:
+    sync: {}
     docker:
-      dockerfile:
-        Dockerfile
-
-
+      dockerfile: Dockerfile
+deploy:
+  kubectl:
+    manifests:
+    - k8s/dnsutils/dnsutils.yaml
+  kustomize:
+    paths:
+    - k8s/dev-example

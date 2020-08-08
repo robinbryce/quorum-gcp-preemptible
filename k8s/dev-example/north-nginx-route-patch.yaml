@@ -1,3 +1,3 @@
 - op: replace
   path: /spec/routes/0/match
-  value: Host(`queth.ledger-0.quorumpreempt.dev`) && PathPrefix(`/static`)
+  value: Host(`queth.quorumpreempt-284308.quorumpreempt.dev`) && PathPrefix(`/static`)

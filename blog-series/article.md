@@ -152,10 +152,11 @@ IAM & Admin / IAM -> Compute Engine Default Service account -> Add another role 
 (pen icon to right)
 
 * Editor
-* Service Account Admin,
-* Secret Manager Admin,
-* Project IAM Admin,
+* Service Account Admin
+* Secret Manager Admin
+* Project IAM Admin
 * Role Administrator
+* Cloud Resource Manager
 
 tip: missing permissions problems use IAM / Roles and filter by permissions to
 find out which roles have the permisions.
@@ -458,6 +459,16 @@ need to set the image repository names to match the project. For lines like
     context: nginx-alpine
 
 Set your gcp_project_id after eu.gcr.io/
+
+Lastly, skaffold 'gets' the state before it works out what to do. And this
+seems to go wrong for customresourcedefinitions on a clean cluster. So first do
+
+kubectl apply -k k8s/dev
+
+This will create the customrresourcedefinitions
+
+This will mostly work, but there will be ImagePull errors. Just ignore them and
+now you should be able to use skaffold run
 
 skaffold run
 
